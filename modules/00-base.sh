@@ -111,6 +111,11 @@ table inet gateway {
         type filter hook prerouting priority mangle;
     }
 
+    # Regular (non-base) chain populated by the panel applier. Jumped from
+    # `forward` for traffic leaving the internal LAN — used to enforce the
+    # "restricted private subnets" allowlist. Empty by default = no restriction.
+    chain lan_egress { }
+
     chain prerouting_nat {
         type nat hook prerouting priority dstnat;
     }

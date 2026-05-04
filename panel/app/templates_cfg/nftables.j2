@@ -35,3 +35,21 @@ table inet gateway {
 {% endfor %}
     }
 }
+
+# --- LAN egress: per-host private-subnet restrictions -------------------------
+# Allowlist evaluated FIRST. Anything not allowlisted but inside a restricted
+# subnet is dropped. Anything else returns to forward and falls through to the
+# broad LAN→WAN accept (i.e. internet works untouched).
+flush chain inet gateway lan_egress
+
+table inet gateway {
+    chain lan_egress {
+{% for r in lan_egress_allow %}
+        ip daddr {{ r.dst_cidr }}{% if r.proto != 'any' %} {{ r.proto }}{% endif %}{% if r.dport %} dport {{ r.dport }}{% endif %} accept
+{% endfor %}
+{% for cidr in lan_restricted %}
+        ip daddr {{ cidr }} drop
+{% endfor %}
+    }
+}
+

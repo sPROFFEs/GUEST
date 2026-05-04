@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block title %}lan egress{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1>LAN egress control</h1>
+        <p class="subtitle">
+            What hosts on <code>{{ lan_iface }}</code> ({{ lan_cidr }}) can reach beyond the gateway.
+        </p>
+    </div>
+</div>
+
+<article class="card">
+    <header>How this works</header>
+    <div class="body">
+        <p style="margin-top:0">
+            By default the gateway NATs <strong>everything</strong> from the
+            internal LAN out through <code>{{ wan_iface }}</code>. That includes
+            any private LAN reachable through the WAN side. Use this page to
+            seal that off:
+        </p>
+        <ol>
+            <li><strong>Restricted subnets</strong> below are <em>blocked</em>
+                for traffic originating in the internal LAN.</li>
+            <li><strong>Allowlist rules</strong> punch holes through that
+                block — they're evaluated <em>before</em> the drop.</li>
+            <li>Anything not matching either list (i.e. the public internet)
+                is <strong>allowed</strong>, just like before.</li>
+        </ol>
+        <p class="muted" style="margin-bottom:0">
+            Empty restricted-subnets list = no restriction at all (compatible
+            with setups where you don't need to seal off any private network).
+            Changes need <strong>Apply</strong> to take effect.
+        </p>
+    </div>
+</article>
+
+<!-- ===================== Restricted subnets ===================== -->
+
+<article class="card">
+    <header>
+        <span>Restricted subnets ({{ subnets|length }})</span>
+    </header>
+    <div class="body">
+        <p class="muted" style="margin:0 0 .9rem">
+            Internal-LAN hosts <strong>cannot</strong> reach addresses in
+            these subnets unless an allowlist rule below matches.
+        </p>
+        <form method="post" action="/lan-egress/subnets" style="margin-bottom:1rem">
+            <div class="form-grid">
+                <label>CIDR
+                    <input name="cidr" placeholder="192.168.100.0/24" required>
+                </label>
+                <label>Description
+                    <input name="description" placeholder="Management LAN">
+                </label>
+            </div>
+            <div class="form-actions">
+                <button type="submit">Add restricted subnet</button>
+            </div>
+        </form>
+
+        {% if not subnets %}
+        <div class="empty">
+            <h3>No restricted subnets</h3>
+            <p>Internal-LAN hosts have unrestricted upstream access right now.
+            Add a subnet above to start sealing it off.</p>
+        </div>
+        {% else %}
+        <div class="table-wrap">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>CIDR</th>
+                    <th>Description</th>
+                    <th class="cell-tight">Enabled</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for s in subnets %}
+                <tr>
+                    <td class="cell-tight"><code>{{ s.cidr }}</code></td>
+                    <td class="truncate" title="{{ s.description }}">{{ s.description or "" }}</td>
+                    <td class="cell-tight">
+                        <form method="post" action="/lan-egress/subnets/{{ s.cidr }}/toggle" class="toggle-form">
+                            <button type="submit" class="switch danger {{ 'on' if s.enabled }}"
+                                    aria-label="{{ 'enabled' if s.enabled else 'disabled' }}"
+                                    title="{{ 'blocking' if s.enabled else 'paused' }}"></button>
+                        </form>
+                    </td>
+                    <td class="cell-tight" style="text-align:right">
+                        <form method="post" action="/lan-egress/subnets/{{ s.cidr }}/delete"
+                              onsubmit="return confirm('Stop restricting {{ s.cidr }}?')">
+                            <button class="btn-sm btn-danger" type="submit" title="Delete">✕</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% endif %}
+    </div>
+</article>
+
+<!-- ===================== Allowlist rules ===================== -->
+
+<article class="card">
+    <header>
+        <span>Allowlist exceptions ({{ rules|length }})</span>
+    </header>
+    <div class="body">
+        <p class="muted" style="margin:0 0 .9rem">
+            Each rule punches a hole through the restricted subnets above —
+            internal-LAN hosts <em>can</em> reach the destination it describes.
+            Most narrow first: a more specific allow before a broader drop.
+        </p>
+        <form method="post" action="/lan-egress/rules" style="margin-bottom:1rem">
+            <div class="form-grid">
+                <label>Destination CIDR
+                    <input name="dst_cidr" placeholder="192.168.100.211/32" required>
+                </label>
+                <label>Protocol
+                    <select name="proto">
+                        <option value="tcp" selected>tcp</option>
+                        <option value="udp">udp</option>
+                        <option value="any">any</option>
+                    </select>
+                </label>
+                <label>Port
+                    <input name="dport" placeholder="optional, e.g. 8006" inputmode="numeric">
+                </label>
+                <label>Description
+                    <input name="description" placeholder="Proxmox UI">
+                </label>
+            </div>
+            <div class="form-actions">
+                <button type="submit">Add allow rule</button>
+                <span class="muted">Changes take effect after <strong>Apply</strong>.</span>
+            </div>
+        </form>
+
+        {% if not rules %}
+        <div class="empty">
+            <h3>No allow rules</h3>
+            <p>With restricted subnets but no allows, internal-LAN hosts
+            can reach the public internet but nothing inside those subnets.</p>
+        </div>
+        {% else %}
+        <div class="table-wrap">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Destination</th>
+                    <th class="cell-tight">Proto</th>
+                    <th class="cell-tight">Port</th>
+                    <th>Description</th>
+                    <th class="cell-tight">Enabled</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for r in rules %}
+                <tr>
+                    <td class="cell-tight muted">{{ r.id }}</td>
+                    <td class="cell-tight"><code>{{ r.dst_cidr }}</code></td>
+                    <td class="cell-tight">{{ r.proto }}</td>
+                    <td class="cell-tight">{{ r.dport or "—" }}</td>
+                    <td class="truncate" title="{{ r.description }}">{{ r.description or "" }}</td>
+                    <td class="cell-tight">
+                        <form method="post" action="/lan-egress/rules/{{ r.id }}/toggle" class="toggle-form">
+                            <button type="submit" class="switch {{ 'on' if r.enabled }}"
+                                    aria-label="toggle rule"
+                                    title="{{ 'active' if r.enabled else 'paused' }}"></button>
+                        </form>
+                    </td>
+                    <td class="cell-tight" style="text-align:right">
+                        <form method="post" action="/lan-egress/rules/{{ r.id }}/delete"
+                              onsubmit="return confirm('Delete this allow rule?')">
+                            <button class="btn-sm btn-danger" type="submit" title="Delete">✕</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% endif %}
+    </div>
+</article>
+
+<!-- ===================== Effective summary ===================== -->
+
+<article class="card">
+    <header>What hosts on the internal LAN can reach right now</header>
+    <div class="body">
+        <ul style="margin:0;padding-left:1.25rem">
+            <li><span class="badge badge-ok">allowed</span>
+                Public internet (anything not in a restricted subnet).</li>
+
+            {% set active_rules = rules | selectattr('enabled') | list %}
+            {% if active_rules %}
+                {% for r in active_rules %}
+                <li style="margin-top:.35rem">
+                    <span class="badge badge-ok">allowed</span>
+                    <code>{{ r.dst_cidr }}</code>{% if r.proto != 'any' %} <small class="muted">({{ r.proto }}{% if r.dport %}:{{ r.dport }}{% endif %})</small>{% endif %}
+                    {% if r.description %}<span class="muted">— {{ r.description }}</span>{% endif %}
+                </li>
+                {% endfor %}
+            {% endif %}
+
+            {% set active_subnets = subnets | selectattr('enabled') | list %}
+            {% if active_subnets %}
+                {% for s in active_subnets %}
+                <li style="margin-top:.35rem">
+                    <span class="badge badge-err">blocked</span>
+                    <code>{{ s.cidr }}</code>
+                    {% if s.description %}<span class="muted">— {{ s.description }}</span>{% endif %}
+                    <small class="muted">(except for the allow rules above)</small>
+                </li>
+                {% endfor %}
+            {% else %}
+                <li style="margin-top:.35rem">
+                    <span class="badge badge-muted">no restrictions</span>
+                    Add a restricted subnet to start sealing things off.
+                </li>
+            {% endif %}
+        </ul>
+    </div>
+</article>
+
+{% endblock %}

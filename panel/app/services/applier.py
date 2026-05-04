@@ -85,12 +85,27 @@ def render(conn: sqlite3.Connection, cfg: Config) -> Tuple[str, str]:
             "action": r["action"],
         })
 
+    # LAN egress: restricted subnets + allowlist exceptions
+    restricted = [
+        r["cidr"] for r in conn.execute(
+            "SELECT cidr FROM lan_restricted_subnets WHERE enabled=1"
+        ).fetchall()
+    ]
+    egress_allow = [
+        {"dst_cidr": r["dst_cidr"], "proto": r["proto"], "dport": r["dport"]}
+        for r in conn.execute(
+            "SELECT dst_cidr, proto, dport FROM lan_egress_rules WHERE enabled=1"
+        ).fetchall()
+    ]
+
     nft_text = _env.get_template("nftables.j2").render(
         blocked_peer_ips=blocked_peer_ips,
         tor_peer_ips=tor_peer_ips,
         blocked_host_ips=blocked_host_ips,
         tor_host_ips=tor_host_ips,
         acls=acls,
+        lan_restricted=restricted,
+        lan_egress_allow=egress_allow,
     )
     dnsmasq_text = _env.get_template("dnsmasq.j2").render(
         static_hosts=static_hosts,

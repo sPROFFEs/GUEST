@@ -9,11 +9,18 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException
 
 from app import auth, config, db as dbmod
-from app.routers import account, acl, auth_views, hosts, peers, settings, views
+from app.routers import account, acl, auth_views, hosts, lan_egress, peers, settings, views
+
+
+_MIGRATIONS = Path(__file__).resolve().parent.parent / "migrations"
 
 
 def create_app() -> FastAPI:
     cfg = config.load()
+
+    # Apply pending migrations idempotently on every boot so a panel rsync +
+    # restart is enough to pick up new tables — no full re-run of module 40.
+    dbmod.init_db(cfg.db_path, _MIGRATIONS)
 
     app = FastAPI(title="Gateway Panel", docs_url=None, redoc_url=None)
     app.state.cfg = cfg
@@ -36,6 +43,7 @@ def create_app() -> FastAPI:
     app.include_router(hosts.router)
     app.include_router(settings.router)
     app.include_router(account.router)
+    app.include_router(lan_egress.router)
 
     @app.exception_handler(HTTPException)
     async def _401(request: Request, exc: HTTPException):

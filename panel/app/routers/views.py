@@ -109,6 +109,25 @@ def settings_view(request: Request, user: str = Depends(require_user)):
     })
 
 
+@router.get("/lan-egress", response_class=HTMLResponse)
+def lan_egress_view(request: Request, user: str = Depends(require_user)):
+    conn = request.app.state.db
+    cfg = request.app.state.cfg
+    subnets = [dict(r) for r in conn.execute(
+        "SELECT * FROM lan_restricted_subnets ORDER BY cidr"
+    )]
+    rules = [dict(r) for r in conn.execute(
+        "SELECT * FROM lan_egress_rules ORDER BY dst_cidr, dport"
+    )]
+    return _templates.TemplateResponse("lan_egress.html", {
+        "request": request, "user": user,
+        "subnets": subnets, "rules": rules,
+        "lan_iface": cfg.lan_iface, "lan_cidr": cfg.lan_cidr,
+        "wan_iface": cfg.wan_iface,
+        **_flags(request),
+    })
+
+
 @router.get("/audit", response_class=HTMLResponse)
 def audit_view(request: Request, user: str = Depends(require_user)):
     conn = request.app.state.db

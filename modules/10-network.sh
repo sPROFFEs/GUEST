@@ -67,7 +67,13 @@ table inet gateway {
     }
 
     chain forward {
-        # Phase-1 default: LAN hosts may reach WAN. Panel will tighten this.
+        # First, give the panel-managed lan_egress chain a chance to apply
+        # the "restricted private subnets" allowlist. It accepts allowlisted
+        # destinations, drops restricted ones, and returns for everything else.
+        iifname "${GATEWAY_LAN_IFACE}" jump lan_egress
+
+        # Catch-all: LAN hosts may reach WAN (i.e. the internet, given that
+        # private subnets that need restricting were already drop'd above).
         iifname "${GATEWAY_LAN_IFACE}" oifname "${GATEWAY_WAN_IFACE}" \
             ip saddr != @blocked_hosts accept
     }

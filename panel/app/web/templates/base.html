@@ -15,9 +15,10 @@
         <nav>
             {% set active = request.url.path %}
             <a href="/"         class="{{ 'active' if active == '/' }}">Overview</a>
-            <a href="/peers"    class="{{ 'active' if active.startswith('/peers') }}">Peers</a>
-            <a href="/hosts"    class="{{ 'active' if active.startswith('/hosts') }}">Hosts</a>
-            <a href="/settings" class="{{ 'active' if active.startswith('/settings') }}">Settings</a>
+            <a href="/peers"      class="{{ 'active' if active.startswith('/peers') }}">Peers</a>
+            <a href="/hosts"      class="{{ 'active' if active.startswith('/hosts') }}">Hosts</a>
+            <a href="/lan-egress" class="{{ 'active' if active.startswith('/lan-egress') }}">LAN egress</a>
+            <a href="/settings"   class="{{ 'active' if active.startswith('/settings') }}">Settings</a>
             <a href="/audit"    class="{{ 'active' if active.startswith('/audit') }}">Audit</a>
         </nav>
         <div class="spacer"></div>
