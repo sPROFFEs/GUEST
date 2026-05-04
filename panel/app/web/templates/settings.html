@@ -42,4 +42,38 @@
     </div>
 </article>
 
+<article class="card">
+    <header>Change your password</header>
+    <div class="body">
+        {% if password_flash %}
+            {% if password_flash[0] == 'ok' %}
+            <div class="banner" style="background:rgba(60,180,95,.10);color:#9fe6ad;border-color:#3cb45f;margin-bottom:1rem">
+                <span>{{ password_flash[1] }}</span>
+            </div>
+            {% else %}
+            <div class="banner banner-error" style="margin-bottom:1rem">
+                <span>{{ password_flash[1] }}</span>
+            </div>
+            {% endif %}
+        {% endif %}
+        <form method="post" action="/me/password">
+            <div class="form-grid">
+                <label>Current password
+                    <input type="password" name="current_password" autocomplete="current-password" required>
+                </label>
+                <label>New password
+                    <input type="password" name="new_password" autocomplete="new-password" minlength="10" required>
+                </label>
+                <label>Confirm new password
+                    <input type="password" name="confirm_password" autocomplete="new-password" minlength="10" required>
+                </label>
+            </div>
+            <div class="form-actions">
+                <button type="submit">Update password</button>
+                <span class="muted">Minimum 10 characters.</span>
+            </div>
+        </form>
+    </div>
+</article>
+
 {% endblock %}

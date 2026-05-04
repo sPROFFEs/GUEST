@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException
 
 from app import auth, config, db as dbmod
-from app.routers import acl, auth_views, hosts, peers, settings, views
+from app.routers import account, acl, auth_views, hosts, peers, settings, views
 
 
 def create_app() -> FastAPI:
@@ -35,6 +35,7 @@ def create_app() -> FastAPI:
     app.include_router(acl.router)
     app.include_router(hosts.router)
     app.include_router(settings.router)
+    app.include_router(account.router)
 
     @app.exception_handler(HTTPException)
     async def _401(request: Request, exc: HTTPException):

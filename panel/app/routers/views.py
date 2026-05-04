@@ -95,8 +95,13 @@ def settings_view(request: Request, user: str = Depends(require_user)):
         k: dbmod.get_setting(conn, k, "false") == "true"
         for k in _SERVICE_FOR_TOGGLE
     }
+    # One-shot flash for the password-change form. Read and clear.
+    flash = getattr(request.app.state, "password_flash", None)
+    request.app.state.password_flash = None
     return _templates.TemplateResponse("settings.html", {
-        "request": request, "user": user, "settings": settings, **_flags(request),
+        "request": request, "user": user, "settings": settings,
+        "password_flash": flash,
+        **_flags(request),
     })
 
 

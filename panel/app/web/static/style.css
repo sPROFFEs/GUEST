@@ -206,17 +206,24 @@ table.data code { font-size: .82em; color: var(--pico-color); background: transp
 
 /* ------- switch toggle ------- */
 .toggle-form { margin: 0; display: inline-flex; align-items: center; gap: .5rem; }
+/* Override Pico's `button { width: 100% }` — the switch must stay 36×20 even
+   inside a flex container that has free space. */
+button.switch,
 .switch {
     position: relative;
-    width: 36px;
-    height: 20px;
+    width: 36px !important;
+    min-width: 36px;
+    max-width: 36px;
+    height: 20px !important;
+    flex: 0 0 36px;
     border-radius: 999px;
     background: #30363d;
     border: 0;
     padding: 0;
+    margin: 0;
     cursor: pointer;
     transition: background .15s;
-    flex-shrink: 0;
+    box-sizing: border-box;
 }
 .switch::after {
     content: "";
