@@ -255,14 +255,15 @@ The panel snapshots before applying and rolls back on failure. Look at *Audit* i
 Module 30 not installed. Check `[modules].tor = true` and re-run `--module 30-tor`. Also make sure Tor itself is healthy: `systemctl status tor`.
 
 **Lost the admin password.**
-Reset it from the VM:
+Reset it from the VM (the `cd` matters — `python -m app.cli` only finds the
+`app` package when invoked from the install dir):
 ```bash
-sudo runuser -u gateway -- /opt/gateway-panel/venv/bin/python \
-    -m app.cli create-admin --db /var/lib/gateway/db.sqlite \
+sudo sqlite3 /var/lib/gateway/db.sqlite \
+    "DELETE FROM users WHERE username='admin'"
+cd /opt/gateway-panel && sudo runuser -u gateway -- \
+    /opt/gateway-panel/venv/bin/python -m app.cli create-admin \
+    --db /var/lib/gateway/db.sqlite \
     --username admin --password 'NEW_PASSWORD_HERE'
-# then in the SQLite, delete the existing admin row first if create-admin
-# refuses (the table has UNIQUE on username):
-sudo sqlite3 /var/lib/gateway/db.sqlite "DELETE FROM users WHERE username='admin'"
 ```
 
 ---

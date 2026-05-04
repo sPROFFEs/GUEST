@@ -41,18 +41,37 @@ systemctl enable wg-quick@wg0 >/dev/null 2>&1 || true
 systemctl restart wg-quick@wg0
 
 # --- WGDashboard ---
+# Pinned to a stable tag. HEAD has been moving toward Python 3.12-only syntax
+# (Amnezia modules use f-strings with backslashes), which breaks Debian 12's
+# Python 3.11. Bump this when you've validated a newer release.
 WGD_DIR=/opt/wgdashboard
+WGD_TAG="${WGD_TAG:-v4.1.4}"
 if [[ ! -d "$WGD_DIR/.git" ]]; then
-    git clone --depth 1 https://github.com/donaldzou/WGDashboard.git "$WGD_DIR" >/dev/null
+    git clone --depth 1 --branch "$WGD_TAG" \
+        https://github.com/donaldzou/WGDashboard.git "$WGD_DIR" >/dev/null
+fi
+# If a previous run cloned a different revision, force the pinned tag.
+( cd "$WGD_DIR" && git fetch --tags --quiet && git checkout --quiet "$WGD_TAG" ) || \
+    echo "WARN: could not switch /opt/wgdashboard to $WGD_TAG"
+
+# Set up WGDashboard's venv manually. Their wgd.sh install script is fragile
+# and fails silently on some Debian images (creates the wrapper but skips the
+# venv). Doing it ourselves is one less moving part.
+WGD_VENV="$WGD_DIR/src/venv"
+WGD_REQ="$WGD_DIR/src/requirements.txt"
+if [[ ! -x "$WGD_VENV/bin/python" ]]; then
+    python3 -m venv "$WGD_VENV"
+fi
+"$WGD_VENV/bin/pip" install --upgrade pip
+if [[ -f "$WGD_REQ" ]]; then
+    "$WGD_VENV/bin/pip" install -r "$WGD_REQ"
+else
+    echo "WARN: $WGD_REQ not found; WGDashboard layout may have changed" >&2
 fi
 
-# WGDashboard's installer creates its own venv under src/ and installs deps.
-# We invoke it once; subsequent runs are no-ops thanks to its idempotency.
-(
-    cd "$WGD_DIR/src"
-    chmod +x ./wgd.sh
-    ./wgd.sh install >/dev/null 2>&1 || true
-)
+# Sanity check before declaring success.
+"$WGD_VENV/bin/python" -c 'import flask' \
+    || { echo "WGDashboard venv is incomplete (flask missing)"; exit 1; }
 
 # Bind only on wg0. WGDashboard reads wg-dashboard.ini for app_ip/app_port.
 WGD_INI="$WGD_DIR/src/wg-dashboard.ini"
