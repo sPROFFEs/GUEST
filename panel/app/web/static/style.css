@@ -1,0 +1,23 @@
+/* Minor overrides on top of Pico. */
+.muted { color: var(--pico-muted-color); }
+
+.dirty-banner {
+    background: #4a3a10;
+    color: #ffd97a;
+    border-left: 4px solid #d4a32a;
+    padding: .75rem 1rem;
+}
+.error-banner {
+    background: #4a1010;
+    color: #ffb0b0;
+    border-left: 4px solid #d44a4a;
+    padding: .75rem 1rem;
+}
+.error-banner pre {
+    background: transparent;
+    color: inherit;
+    margin: .25rem 0 0 0;
+    white-space: pre-wrap;
+}
+
+table code, td code, th code { font-size: .85em; }

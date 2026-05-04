@@ -1,0 +1,39 @@
+# Gateway configuration. Copy to gateway.toml and edit before running install.sh.
+# Most values are immutable post-install (changing them requires re-running the
+# installer or `gateway-reconfigure`). Module toggles can be flipped at runtime
+# from the panel — what's set here is just the initial state.
+
+[gateway]
+name      = "gw-isolated-01"
+wan_iface = "eth0"
+lan_iface = "eth1"
+# Address the gateway holds on the LAN-internal bridge. CIDR form.
+lan_cidr  = "192.168.100.1/24"
+
+[modules]
+wireguard  = true
+tor        = false
+dhcp       = true
+monitoring = false
+
+[wireguard]
+listen_port = 51820
+peer_cidr   = "10.66.66.0/24"
+# Public reachable endpoint for peer configs. Host:port.
+endpoint    = "vpn.example.com:51820"
+
+[dhcp]
+# dnsmasq dhcp-range syntax: start,end,lease-time
+range = "192.168.100.100,192.168.100.200,12h"
+
+[panel]
+# The panel binds only on the WG interface (wg0), never on WAN.
+bind_addr = "10.66.66.1"
+bind_port = 8443
+# WGDashboard binds the same way.
+wgd_bind_addr = "10.66.66.1"
+wgd_bind_port = 10086
+
+[tor]
+trans_port = 9040
+dns_port   = 5353

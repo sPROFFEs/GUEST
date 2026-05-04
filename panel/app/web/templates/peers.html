@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}peers{% endblock %}
+{% block content %}
+<h2>WireGuard peers</h2>
+<p class="muted">Live state from <code>wg show wg0</code>. Add/remove peers in WGDashboard; toggles + ACLs live here.</p>
+
+{% if not peers %}
+<article>No peers configured yet. Use WGDashboard to create them.</article>
+{% else %}
+<table>
+    <thead>
+        <tr>
+            <th>Label</th>
+            <th>Peer IP</th>
+            <th>Endpoint</th>
+            <th>Handshake</th>
+            <th>RX / TX</th>
+            <th>Blocked</th>
+            <th>Tor</th>
+            <th>ACLs</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for p in peers %}
+        <tr>
+            <td>
+                <form method="post" action="/peers/{{ p.pubkey }}/label">
+                    <input name="label" value="{{ p.label }}" placeholder="(no label)" style="width:10rem;display:inline-block">
+                </form>
+                <small class="muted"><code>{{ p.pubkey[:12] }}…</code></small>
+            </td>
+            <td><code>{{ p.peer_ip }}</code></td>
+            <td><code>{{ p.endpoint }}</code></td>
+            <td>
+                {% if p.handshake_age is none %}
+                    <span class="muted">never</span>
+                {% else %}
+                    {{ p.handshake_age }}s ago
+                {% endif %}
+            </td>
+            <td><small>{{ p.rx }} / {{ p.tx }}</small></td>
+            <td>
+                <form method="post" action="/peers/{{ p.pubkey }}/toggle">
+                    <input type="hidden" name="field" value="blocked">
+                    <button class="{{ 'contrast' if p.blocked else 'secondary outline' }}" type="submit">
+                        {{ 'YES' if p.blocked else 'no' }}
+                    </button>
+                </form>
+            </td>
+            <td>
+                <form method="post" action="/peers/{{ p.pubkey }}/toggle">
+                    <input type="hidden" name="field" value="tor_routed">
+                    <button class="{{ 'primary' if p.tor_routed else 'secondary outline' }}" type="submit">
+                        {{ 'on' if p.tor_routed else 'off' }}
+                    </button>
+                </form>
+            </td>
+            <td><a href="/peers/{{ p.pubkey }}/acl">edit</a></td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

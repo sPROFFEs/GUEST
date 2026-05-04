@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{{ gateway_name }} — login</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+</head>
+<body>
+<main class="container" style="max-width: 28rem; margin-top: 6rem;">
+    <hgroup>
+        <h2>{{ gateway_name }}</h2>
+        <p>Sign in to manage this gateway.</p>
+    </hgroup>
+    {% if error %}<article style="background:#5a1a1a;color:#fff;padding:.5rem 1rem;">{{ error }}</article>{% endif %}
+    <form method="post" action="/login">
+        <label>Username
+            <input type="text" name="username" autocomplete="username" required autofocus>
+        </label>
+        <label>Password
+            <input type="password" name="password" autocomplete="current-password" required>
+        </label>
+        <button type="submit">Sign in</button>
+    </form>
+</main>
+</body>
+</html>

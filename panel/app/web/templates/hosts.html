@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}hosts{% endblock %}
+{% block content %}
+<h2>Internal hosts</h2>
+<p class="muted">Discovered via ARP/neighbor on the LAN, plus manually-added static leases.</p>
+
+<article>
+    <header><strong>Add static host</strong></header>
+    <form method="post" action="/hosts">
+        <div class="grid">
+            <label>MAC <input name="mac" placeholder="aa:bb:cc:dd:ee:ff" required></label>
+            <label>IP  <input name="ip"  placeholder="192.168.100.50" required></label>
+            <label>Hostname <input name="hostname" placeholder="proxmox-01"></label>
+        </div>
+        <button type="submit">Add</button>
+    </form>
+</article>
+
+{% if not hosts %}
+<p class="muted">No hosts seen yet. The scanner runs every 30s.</p>
+{% else %}
+<table>
+    <thead>
+        <tr>
+            <th>MAC</th><th>IP</th><th>Hostname</th>
+            <th>Static</th><th>Blocked</th><th>Tor</th>
+            <th>Last seen</th><th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for h in hosts %}
+        <tr>
+            <td><code>{{ h.mac }}</code></td>
+            <td>
+                <form method="post" action="/hosts/{{ h.mac }}/ip">
+                    <input name="ip" value="{{ h.ip or '' }}" style="width:9rem;display:inline-block">
+                </form>
+            </td>
+            <td>{{ h.hostname or "" }}</td>
+            <td>
+                <form method="post" action="/hosts/{{ h.mac }}/toggle">
+                    <input type="hidden" name="field" value="static">
+                    <button class="{{ 'primary' if h.static else 'secondary outline' }}" type="submit">{{ 'fixed' if h.static else 'dhcp' }}</button>
+                </form>
+            </td>
+            <td>
+                <form method="post" action="/hosts/{{ h.mac }}/toggle">
+                    <input type="hidden" name="field" value="blocked">
+                    <button class="{{ 'contrast' if h.blocked else 'secondary outline' }}" type="submit">{{ 'YES' if h.blocked else 'no' }}</button>
+                </form>
+            </td>
+            <td>
+                <form method="post" action="/hosts/{{ h.mac }}/toggle">
+                    <input type="hidden" name="field" value="tor_routed">
+                    <button class="{{ 'primary' if h.tor_routed else 'secondary outline' }}" type="submit">{{ 'on' if h.tor_routed else 'off' }}</button>
+                </form>
+            </td>
+            <td><small>{{ h.last_seen or "—" }}</small></td>
+            <td>
+                <form method="post" action="/hosts/{{ h.mac }}/delete">
+                    <button class="contrast outline" type="submit">×</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

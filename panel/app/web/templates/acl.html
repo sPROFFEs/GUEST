@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}acl{% endblock %}
+{% block content %}
+<p><a href="/peers">← back to peers</a></p>
+<h2>ACL: {{ label or pubkey[:16] + "…" }}</h2>
+<p class="muted">Pubkey: <code>{{ pubkey }}</code></p>
+
+<article>
+    <header><strong>Add rule</strong></header>
+    <form method="post" action="/peers/{{ pubkey }}/acl">
+        <div class="grid">
+            <label>Destination CIDR
+                <input name="dst_cidr" placeholder="192.168.100.211/32" required>
+            </label>
+            <label>Protocol
+                <select name="proto">
+                    <option value="tcp" selected>tcp</option>
+                    <option value="udp">udp</option>
+                    <option value="any">any</option>
+                </select>
+            </label>
+            <label>Port (optional)
+                <input name="dport" placeholder="8006" inputmode="numeric">
+            </label>
+            <label>Action
+                <select name="action">
+                    <option value="accept" selected>accept</option>
+                    <option value="drop">drop</option>
+                </select>
+            </label>
+        </div>
+        <button type="submit">Add</button>
+    </form>
+</article>
+
+<h3>Rules</h3>
+{% if not rules %}
+<p class="muted">No rules. Without rules this peer can reach <strong>nothing</strong> on the LAN.</p>
+{% else %}
+<table>
+    <thead><tr><th>#</th><th>dst</th><th>proto</th><th>dport</th><th>action</th><th></th></tr></thead>
+    <tbody>
+        {% for r in rules %}
+        <tr>
+            <td>{{ r.id }}</td>
+            <td><code>{{ r.dst_cidr }}</code></td>
+            <td>{{ r.proto }}</td>
+            <td>{{ r.dport or "—" }}</td>
+            <td><strong>{{ r.action }}</strong></td>
+            <td>
+                <form method="post" action="/acl/{{ r.id }}/delete">
+                    <button class="contrast outline" type="submit">delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

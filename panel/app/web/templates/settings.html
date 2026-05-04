@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}settings{% endblock %}
+{% block content %}
+<h2>Settings</h2>
+<p class="muted">Module-level toggles. Disabling a module stops its service immediately.</p>
+
+<article>
+    <header><strong>Modules</strong></header>
+    <div class="grid">
+        {% for key, value in settings.items() %}
+        <form method="post" action="/settings/toggle">
+            <input type="hidden" name="key" value="{{ key }}">
+            <button class="{{ 'primary' if value else 'secondary outline' }}" type="submit">
+                {{ key }}: {{ 'ENABLED' if value else 'disabled' }}
+            </button>
+        </form>
+        {% endfor %}
+    </div>
+</article>
+
+<article>
+    <header><strong>Apply</strong></header>
+    <p>Re-render nftables and dnsmasq from the database state and reload the services.</p>
+    <form method="post" action="/apply">
+        <button type="submit">Apply now</button>
+    </form>
+</article>
+{% endblock %}

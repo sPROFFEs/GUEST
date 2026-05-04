@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{{ gateway_name|default("gateway") }} — {% block title %}panel{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<nav class="container-fluid">
+    <ul>
+        <li><strong>{{ gateway_name|default("gateway") }}</strong></li>
+    </ul>
+    <ul>
+        <li><a href="/">overview</a></li>
+        <li><a href="/peers">peers</a></li>
+        <li><a href="/hosts">hosts</a></li>
+        <li><a href="/settings">settings</a></li>
+        <li><a href="/audit">audit</a></li>
+        <li>
+            <form method="post" action="/logout" style="display:inline">
+                <button class="secondary outline" type="submit">logout</button>
+            </form>
+        </li>
+    </ul>
+</nav>
+
+<main class="container">
+    {% if dirty %}
+    <article class="dirty-banner">
+        <strong>Pending changes.</strong> The running ruleset doesn't reflect your edits yet.
+        <form method="post" action="/apply" style="display:inline">
+            <button type="submit">Apply</button>
+        </form>
+    </article>
+    {% endif %}
+    {% if last_error %}
+    <article class="error-banner">
+        <strong>Last apply failed:</strong> <pre>{{ last_error }}</pre>
+    </article>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</main>
+</body>
+</html>

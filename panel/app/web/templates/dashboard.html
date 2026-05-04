@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}overview{% endblock %}
+{% block content %}
+<h2>Overview</h2>
+
+<div class="grid">
+    <article>
+        <header><strong>Network</strong></header>
+        <table>
+            <tr><th>WAN iface</th><td>{{ wan_iface }}</td></tr>
+            <tr><th>LAN iface</th><td>{{ lan_iface }}</td></tr>
+            <tr><th>LAN CIDR</th><td>{{ lan_cidr }}</td></tr>
+            <tr><th>WG peer CIDR</th><td>{{ wg_peer_cidr }}</td></tr>
+        </table>
+    </article>
+
+    <article>
+        <header><strong>Modules</strong></header>
+        <table>
+            {% for svc, state in services.items() %}
+            <tr>
+                <th>{{ svc }}</th>
+                <td><code>{{ state }}</code></td>
+            </tr>
+            {% endfor %}
+        </table>
+    </article>
+</div>
+
+<article>
+    <header><strong>Toggles</strong></header>
+    <p class="muted">Service-level on/off. nft rule changes still need <em>Apply</em>.</p>
+    <div class="grid">
+        {% for key, value in settings.items() %}
+        <form method="post" action="/settings/toggle">
+            <input type="hidden" name="key" value="{{ key }}">
+            <button class="{{ 'primary' if value else 'secondary outline' }}" type="submit">
+                {{ key.replace('_enabled','').upper() }}: {{ 'on' if value else 'off' }}
+            </button>
+        </form>
+        {% endfor %}
+    </div>
+</article>
+{% endblock %}
