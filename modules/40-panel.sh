@@ -24,17 +24,25 @@ install -m 0640 -o gateway -g gateway "${REPO_ROOT}/gateway.toml" /etc/gateway/g
 if [[ ! -x "${INSTALL_DIR}/venv/bin/python" ]]; then
     python3 -m venv "${INSTALL_DIR}/venv"
 fi
-"${INSTALL_DIR}/venv/bin/pip" install --quiet --upgrade pip
-"${INSTALL_DIR}/venv/bin/pip" install --quiet -r "${INSTALL_DIR}/requirements.txt"
+"${INSTALL_DIR}/venv/bin/pip" install --upgrade pip
+"${INSTALL_DIR}/venv/bin/pip" install -r "${INSTALL_DIR}/requirements.txt"
+
+# Sanity-check: deps must actually be importable. If pip silently retried-and-
+# gave-up (DNS flake, mirror down), abort here instead of failing later with
+# a confusing message.
+"${INSTALL_DIR}/venv/bin/python" -c 'import fastapi, jinja2, argon2, itsdangerous, uvicorn' \
+    || { echo "panel deps missing — check pip output above"; exit 1; }
 
 # --- DB init + admin bootstrap ---
-sudo -u gateway "${INSTALL_DIR}/venv/bin/python" -m app.cli init-db --db "$DB_PATH"
+# Run from INSTALL_DIR so `python -m app.cli` finds the `app` package.
+PY="${INSTALL_DIR}/venv/bin/python"
+RUN_AS="sudo -u gateway --chdir=${INSTALL_DIR}"
 
-if ! sudo -u gateway "${INSTALL_DIR}/venv/bin/python" -m app.cli has-admin --db "$DB_PATH"; then
-    # Generate a one-shot bootstrap password and print it. Operator changes it
-    # on first login (TODO: enforce via flag in users table).
+$RUN_AS $PY -m app.cli init-db --db "$DB_PATH"
+
+if ! $RUN_AS $PY -m app.cli has-admin --db "$DB_PATH"; then
     BOOT_PW="$(python3 -c 'import secrets,string; print("".join(secrets.choice(string.ascii_letters+string.digits) for _ in range(16)))')"
-    sudo -u gateway "${INSTALL_DIR}/venv/bin/python" -m app.cli create-admin \
+    $RUN_AS $PY -m app.cli create-admin \
         --db "$DB_PATH" --username admin --password "$BOOT_PW"
     echo
     echo "================================================================"
