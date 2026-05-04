@@ -55,19 +55,18 @@
         <tbody>
             {% for h in hosts %}
             <tr>
-                <td><code>{{ h.mac }}</code></td>
-                <td>
+                <td class="cell-tight"><code>{{ h.mac }}</code></td>
+                <td class="cell-tight">
                     <form method="post" action="/hosts/{{ h.mac }}/ip" class="inline-edit">
                         <input name="ip" value="{{ h.ip or '' }}" placeholder="—">
-                        <button class="btn-sm" type="submit">Save</button>
+                        <button class="btn-sm" type="submit" title="Save IP">✓</button>
                     </form>
                 </td>
-                <td>{{ h.hostname or "" }}</td>
-                <td>
+                <td class="truncate" title="{{ h.hostname }}">{{ h.hostname or "" }}</td>
+                <td class="cell-tight">
                     <form method="post" action="/hosts/{{ h.mac }}/toggle" class="toggle-form">
                         <input type="hidden" name="field" value="static">
-                        <button type="submit" class="switch {{ 'on' if h.static }}" aria-label="static lease"></button>
-                        <span class="muted" style="font-size:.78rem">{{ "fixed" if h.static else "dynamic" }}</span>
+                        <button type="submit" class="switch {{ 'on' if h.static }}" aria-label="static lease" title="{{ 'fixed' if h.static else 'dynamic' }}"></button>
                     </form>
                 </td>
                 <td>
@@ -82,10 +81,10 @@
                         <button type="submit" class="switch {{ 'on' if h.tor_routed }}" aria-label="route via tor"></button>
                     </form>
                 </td>
-                <td class="muted" style="font-size:.82rem">{{ h.last_seen or "—" }}</td>
-                <td style="text-align:right">
-                    <form method="post" action="/hosts/{{ h.mac }}/delete">
-                        <button class="btn-sm btn-danger" type="submit">Delete</button>
+                <td class="cell-tight muted" style="font-size:.78rem">{{ h.last_seen or "—" }}</td>
+                <td class="cell-tight" style="text-align:right">
+                    <form method="post" action="/hosts/{{ h.mac }}/delete" onsubmit="return confirm('Delete this host entry?')">
+                        <button class="btn-sm btn-danger" type="submit" title="Delete">✕</button>
                     </form>
                 </td>
             </tr>

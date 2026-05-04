@@ -61,23 +61,22 @@
                         <span class="badge badge-muted">offline</span>
                     {% endif %}
                 </td>
-                <td>
+                <td title="pubkey: {{ p.pubkey }}">
                     <form method="post" action="/peers/{{ p.pubkey }}/label" class="inline-edit">
-                        <input name="label" value="{{ p.label }}" placeholder="add a label">
-                        <button class="btn-sm" type="submit">Save</button>
+                        <input name="label" value="{{ p.label }}" placeholder="add label">
+                        <button class="btn-sm" type="submit" title="Save label">✓</button>
                     </form>
-                    <div class="muted mono" style="font-size:.72rem;margin-top:.25rem">{{ p.pubkey[:24] }}…</div>
                 </td>
-                <td><code>{{ p.peer_ip }}</code></td>
-                <td><code class="muted">{{ p.endpoint }}</code></td>
-                <td class="cell-tight">
+                <td class="cell-tight"><code>{{ p.peer_ip }}</code></td>
+                <td class="truncate"><code class="muted">{{ p.endpoint }}</code></td>
+                <td class="cell-tight muted" style="font-size:.82rem">
                     {% if p.handshake_age is none %}
-                        <span class="muted">—</span>
+                        —
                     {% else %}
-                        {{ p.handshake_age }}s ago
+                        {{ p.handshake_age }}s
                     {% endif %}
                 </td>
-                <td class="cell-tight muted">{{ p.rx | filesizeformat }} / {{ p.tx | filesizeformat }}</td>
+                <td class="cell-tight muted" style="font-size:.82rem">{{ p.rx | filesizeformat }} / {{ p.tx | filesizeformat }}</td>
                 <td>
                     <form method="post" action="/peers/{{ p.pubkey }}/toggle" class="toggle-form">
                         <input type="hidden" name="field" value="blocked">
