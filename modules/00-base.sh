@@ -38,7 +38,10 @@ net.ipv4.ip_forward = 1
 net.ipv4.conf.all.rp_filter = 2
 net.ipv4.conf.default.rp_filter = 2
 EOF
-sysctl --system >/dev/null
+# Apply ONLY our file. `sysctl --system` walks every sysctl.d/ file and barks
+# on keys it can't touch in containers/restricted environments — those aren't
+# ours. If any of OUR keys fail, that's a real problem worth surfacing.
+sysctl -p /etc/sysctl.d/99-gateway.conf >/dev/null
 
 # --- directories ---
 install -d -m 0755 /etc/gateway
