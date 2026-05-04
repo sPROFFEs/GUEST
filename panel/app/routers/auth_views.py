@@ -37,7 +37,9 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
         token,
         httponly=True,
         samesite="strict",
-        secure=False,  # served over plain HTTP on wg0; tunnel itself is the encryption
+        # Auto: Secure flag tracks the request scheme. Over plain HTTP (the WG
+        # tunnel itself is the encryption) we leave it off; under TLS we set it.
+        secure=request.url.scheme == "https",
         max_age=60 * 60 * 12,
     )
     dbmod.audit(conn, username, "login")

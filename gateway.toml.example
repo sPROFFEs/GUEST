@@ -43,6 +43,15 @@ wgd_bind_port = 10086
 # DO NOT set true if your WAN is the public internet.
 expose_on_wan = false
 
+# When true, the custom panel serves HTTPS with a self-signed certificate
+# generated at install time (10-year validity, CN = gateway name). Browsers
+# will warn on first visit; accept the exception. Cert lives in
+# /etc/gateway/tls/. To rotate, delete the .crt/.key and re-run module 40.
+#
+# WGDashboard has its own HTTPS toggle in its web UI (Settings page); enable
+# it there if you also want HTTPS on port 10086.
+tls = false
+
 [tor]
 trans_port = 9040
 dns_port   = 5353

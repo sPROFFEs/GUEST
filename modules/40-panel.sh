@@ -74,6 +74,25 @@ EOF
 nft -c -f /etc/nftables.conf
 systemctl reload nftables 2>/dev/null || nft -f /etc/nftables.conf
 
+# --- TLS (optional, self-signed) ---
+UVICORN_TLS_ARGS=""
+if [[ "${PANEL_TLS:-false}" == "true" ]]; then
+    install -d -m 0750 -o gateway -g gateway /etc/gateway/tls
+    CRT=/etc/gateway/tls/panel.crt
+    KEY=/etc/gateway/tls/panel.key
+    if [[ ! -s "$CRT" || ! -s "$KEY" ]]; then
+        openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+            -keyout "$KEY" -out "$CRT" \
+            -subj "/CN=${GATEWAY_NAME}" \
+            -addext "subjectAltName=DNS:${GATEWAY_NAME},IP:${PANEL_BIND_ADDR}" \
+            >/dev/null 2>&1
+        chown gateway:gateway "$CRT" "$KEY"
+        chmod 0640 "$CRT" "$KEY"
+        echo "[40-panel] generated self-signed cert for ${GATEWAY_NAME}"
+    fi
+    UVICORN_TLS_ARGS="--ssl-keyfile=${KEY} --ssl-certfile=${CRT}"
+fi
+
 # --- systemd units ---
 cat > /etc/systemd/system/gateway-panel.service <<EOF
 [Unit]
@@ -90,11 +109,9 @@ Environment=GATEWAY_DB=${DB_PATH}
 Environment=GATEWAY_TOML=/etc/gateway/gateway.toml
 Environment=GATEWAY_BIND_ADDR=${PANEL_BIND_ADDR}
 Environment=GATEWAY_BIND_PORT=${PANEL_BIND_PORT}
-ExecStart=${INSTALL_DIR}/venv/bin/uvicorn app.main:app --host \${GATEWAY_BIND_ADDR} --port \${GATEWAY_BIND_PORT}
+ExecStart=${INSTALL_DIR}/venv/bin/uvicorn app.main:app --host \${GATEWAY_BIND_ADDR} --port \${GATEWAY_BIND_PORT} ${UVICORN_TLS_ARGS}
 Restart=on-failure
 RestartSec=5
-# The panel needs to call nft/wg/ip/systemctl. Easiest: run as gateway user
-# but allow specific sudo-less commands via the wrapper below.
 AmbientCapabilities=CAP_NET_ADMIN
 
 [Install]
