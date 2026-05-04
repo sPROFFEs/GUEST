@@ -49,8 +49,9 @@
         </p>
         <form method="post" action="/lan-egress/subnets" style="margin-bottom:1rem">
             <div class="form-grid">
-                <label>CIDR
+                <label>Network
                     <input name="cidr" placeholder="192.168.100.0/24" required>
+                    <small class="muted">Type a subnet (<code>192.168.100.0/24</code>) or a single IP — the slash isn't required.</small>
                 </label>
                 <label>Description
                     <input name="description" placeholder="Management LAN">
@@ -119,8 +120,9 @@
         </p>
         <form method="post" action="/lan-egress/rules" style="margin-bottom:1rem">
             <div class="form-grid">
-                <label>Destination CIDR
-                    <input name="dst_cidr" placeholder="192.168.100.211/32" required>
+                <label>Destination
+                    <input name="dst_cidr" placeholder="192.168.100.211 or 192.168.100.0/24" required>
+                    <small class="muted">Single IP or subnet — the <code>/32</code> isn't required for hosts.</small>
                 </label>
                 <label>Protocol
                     <select name="proto">

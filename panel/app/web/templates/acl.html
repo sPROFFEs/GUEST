@@ -15,8 +15,9 @@
     <div class="body">
         <form method="post" action="/peers/{{ pubkey }}/acl">
             <div class="form-grid">
-                <label>Destination CIDR
-                    <input name="dst_cidr" placeholder="192.168.100.211/32" required>
+                <label>Destination
+                    <input name="dst_cidr" placeholder="192.168.100.211 or 192.168.100.0/24" required>
+                    <small class="muted">Single IP or subnet — the <code>/32</code> isn't required for hosts.</small>
                 </label>
                 <label>Protocol
                     <select name="proto">

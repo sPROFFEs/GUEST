@@ -1,24 +1,12 @@
 """LAN egress control: restricted subnets + allowlist exceptions."""
 from __future__ import annotations
 
-import ipaddress
-
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
 from app import db as dbmod
 from app.auth import require_user
-
-router = APIRouter()
-
-
-def _validate_cidr(s: str) -> str:
-    """Normalize and validate a CIDR (IPv4 only for now)."""
-    try:
-        net = ipaddress.IPv4Network(s.strip(), strict=False)
-        return str(net)
-    except (ValueError, ipaddress.AddressValueError, ipaddress.NetmaskValueError):
-        raise HTTPException(400, f"Invalid CIDR: {s}")
+from app.util import normalize_cidr
 
 
 # ----- restricted subnets -----
@@ -30,7 +18,7 @@ def add_subnet(
     description: str = Form(""),
     user: str = Depends(require_user),
 ):
-    cidr = _validate_cidr(cidr)
+    cidr = normalize_cidr(cidr)
     conn = request.app.state.db
     with dbmod.transaction(conn):
         conn.execute(
@@ -79,7 +67,7 @@ def add_rule(
 ):
     if proto not in {"tcp", "udp", "any"}:
         raise HTTPException(400, "bad proto")
-    dst_cidr = _validate_cidr(dst_cidr)
+    dst_cidr = normalize_cidr(dst_cidr)
     dport_val = int(dport) if dport.strip() else None
     if dport_val is not None and not (1 <= dport_val <= 65535):
         raise HTTPException(400, "bad port")

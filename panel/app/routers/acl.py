@@ -6,6 +6,7 @@ from fastapi.responses import RedirectResponse
 
 from app import db as dbmod
 from app.auth import require_user
+from app.util import normalize_cidr
 
 router = APIRouter()
 
@@ -33,6 +34,7 @@ def add(
         raise HTTPException(400, "bad proto")
     if action not in {"accept", "drop"}:
         raise HTTPException(400, "bad action")
+    dst_cidr = normalize_cidr(dst_cidr)
     dport_val = int(dport) if dport.strip() else None
     conn = request.app.state.db
     with dbmod.transaction(conn):
