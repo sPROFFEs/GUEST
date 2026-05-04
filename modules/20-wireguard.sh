@@ -95,25 +95,27 @@ systemctl enable wgdashboard >/dev/null 2>&1 || true
 systemctl restart wgdashboard
 
 # --- nftables fragment ---
-# Open WG udp port on WAN, allow forward wg0 -> LAN (panel ACLs refine which
-# peer can reach which host:port via panel_forward chain), and let peers reach
-# the panel + WGDashboard locally on wg0.
+# WG udp port on WAN, services reachable on wg0 always, plus optionally on the
+# WAN iface when [panel].expose_on_wan = true.
+EXPOSE_WAN_RULE=""
+if [[ "${PANEL_EXPOSE_ON_WAN:-false}" == "true" ]]; then
+    EXPOSE_WAN_RULE="iifname \"${GATEWAY_WAN_IFACE}\" tcp dport { ${PANEL_BIND_PORT}, ${PANEL_WGD_BIND_PORT} } accept"
+fi
+
 cat > /etc/nftables.d/20-wireguard.nft <<EOF
 # Managed by gateway installer (20-wireguard)
 table inet gateway {
     chain input {
         # WG handshake/data on WAN
         udp dport ${WIREGUARD_LISTEN_PORT} accept
-        # Local services reachable only via the WG tunnel
+        # Panels reachable from inside the WG tunnel
         iifname "wg0" tcp dport { ${PANEL_BIND_PORT}, ${PANEL_WGD_BIND_PORT} } accept
         iifname "wg0" udp dport 53 accept
         iifname "wg0" tcp dport 53 accept
+        ${EXPOSE_WAN_RULE}
     }
 
     chain forward {
-        # Peers reach the LAN-internal subnet — but only what panel_forward allows.
-        # The jump is added by 45-panel-chains.nft; without that fragment yet,
-        # this stays as a permissive bootstrap so phase-2 testing works.
         iifname "wg0" oifname "${GATEWAY_LAN_IFACE}" ip saddr != @blocked_peers accept
     }
 }

@@ -27,12 +27,21 @@ endpoint    = "vpn.example.com:51820"
 range = "192.168.100.100,192.168.100.200,12h"
 
 [panel]
-# The panel binds only on the WG interface (wg0), never on WAN.
+# Bind addresses for the custom panel and WGDashboard.
+#   - Default ("10.66.66.1"): reachable only via the WG tunnel.
+#   - "0.0.0.0":              reachable from every interface, gated by nft.
+#                             Use this when the gateway's "WAN" is itself an
+#                             internal management network (not the public
+#                             internet).
 bind_addr = "10.66.66.1"
 bind_port = 8443
-# WGDashboard binds the same way.
 wgd_bind_addr = "10.66.66.1"
 wgd_bind_port = 10086
+
+# When true, nft also opens panel + WGDashboard ports on the WAN interface.
+# Combine with bind_addr = "0.0.0.0" to make the panels reachable there.
+# DO NOT set true if your WAN is the public internet.
+expose_on_wan = false
 
 [tor]
 trans_port = 9040
