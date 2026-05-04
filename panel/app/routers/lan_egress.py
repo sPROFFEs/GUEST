@@ -8,6 +8,8 @@ from app import db as dbmod
 from app.auth import require_user
 from app.util import normalize_cidr
 
+router = APIRouter()
+
 
 # ----- restricted subnets -----
 
