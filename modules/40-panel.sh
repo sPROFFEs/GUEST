@@ -35,14 +35,18 @@ fi
 
 # --- DB init + admin bootstrap ---
 # Run from INSTALL_DIR so `python -m app.cli` finds the `app` package.
+# `runuser` (we're root here) preserves cwd cleanly, unlike sudo with --chdir
+# which requires explicit sudoers allowance.
 PY="${INSTALL_DIR}/venv/bin/python"
-RUN_AS="sudo -u gateway --chdir=${INSTALL_DIR}"
+run_as_gateway() {
+    ( cd "${INSTALL_DIR}" && runuser -u gateway -- "$@" )
+}
 
-$RUN_AS $PY -m app.cli init-db --db "$DB_PATH"
+run_as_gateway "$PY" -m app.cli init-db --db "$DB_PATH"
 
-if ! $RUN_AS $PY -m app.cli has-admin --db "$DB_PATH"; then
+if ! run_as_gateway "$PY" -m app.cli has-admin --db "$DB_PATH"; then
     BOOT_PW="$(python3 -c 'import secrets,string; print("".join(secrets.choice(string.ascii_letters+string.digits) for _ in range(16)))')"
-    $RUN_AS $PY -m app.cli create-admin \
+    run_as_gateway "$PY" -m app.cli create-admin \
         --db "$DB_PATH" --username admin --password "$BOOT_PW"
     echo
     echo "================================================================"
