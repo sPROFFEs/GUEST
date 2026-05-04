@@ -1,44 +1,71 @@
 {% extends "base.html" %}
 {% block title %}overview{% endblock %}
 {% block content %}
-<h2>Overview</h2>
 
-<div class="grid">
-    <article>
-        <header><strong>Network</strong></header>
-        <table>
-            <tr><th>WAN iface</th><td>{{ wan_iface }}</td></tr>
-            <tr><th>LAN iface</th><td>{{ lan_iface }}</td></tr>
-            <tr><th>LAN CIDR</th><td>{{ lan_cidr }}</td></tr>
-            <tr><th>WG peer CIDR</th><td>{{ wg_peer_cidr }}</td></tr>
-        </table>
+<div class="page-header">
+    <div>
+        <h1>Overview</h1>
+        <p class="subtitle">Network identity and live module state.</p>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem;">
+    <article class="card">
+        <header>Network</header>
+        <div class="body">
+            <dl class="kv">
+                <dt>WAN iface</dt>     <dd><code>{{ wan_iface }}</code></dd>
+                <dt>LAN iface</dt>     <dd><code>{{ lan_iface }}</code></dd>
+                <dt>LAN CIDR</dt>      <dd><code>{{ lan_cidr }}</code></dd>
+                <dt>WG peer CIDR</dt>  <dd><code>{{ wg_peer_cidr }}</code></dd>
+            </dl>
+        </div>
     </article>
 
-    <article>
-        <header><strong>Modules</strong></header>
-        <table>
-            {% for svc, state in services.items() %}
-            <tr>
-                <th>{{ svc }}</th>
-                <td><code>{{ state }}</code></td>
-            </tr>
-            {% endfor %}
-        </table>
+    <article class="card">
+        <header>Services</header>
+        <div class="body">
+            <table class="data">
+                <tbody>
+                {% for svc, state in services.items() %}
+                    <tr>
+                        <td>{{ svc }}</td>
+                        <td style="text-align:right">
+                            {% if state == 'active' %}
+                                <span class="badge badge-ok">running</span>
+                            {% elif state == 'inactive' %}
+                                <span class="badge badge-muted">stopped</span>
+                            {% elif state == 'failed' %}
+                                <span class="badge badge-err">failed</span>
+                            {% else %}
+                                <span class="badge badge-warn">{{ state or 'unknown' }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </article>
 </div>
 
-<article>
-    <header><strong>Toggles</strong></header>
-    <p class="muted">Service-level on/off. nft rule changes still need <em>Apply</em>.</p>
-    <div class="grid">
-        {% for key, value in settings.items() %}
-        <form method="post" action="/settings/toggle">
-            <input type="hidden" name="key" value="{{ key }}">
-            <button class="{{ 'primary' if value else 'secondary outline' }}" type="submit">
-                {{ key.replace('_enabled','').upper() }}: {{ 'on' if value else 'off' }}
-            </button>
-        </form>
-        {% endfor %}
+<article class="card">
+    <header>Module toggles</header>
+    <div class="body">
+        <p class="muted" style="margin:0 0 .75rem">
+            Service-level on/off. Firewall rule changes still need an explicit
+            <strong>Apply</strong> (banner appears at the top of the page).
+        </p>
+        <div style="display:flex;flex-wrap:wrap;gap:.75rem;">
+            {% for key, value in settings.items() %}
+            <form method="post" action="/settings/toggle" class="toggle-form">
+                <input type="hidden" name="key" value="{{ key }}">
+                <button type="submit" class="switch {{ 'on' if value }}" aria-label="toggle {{ key }}"></button>
+                <span>{{ key.replace('_enabled','').upper() }}</span>
+            </form>
+            {% endfor %}
+        </div>
     </div>
 </article>
+
 {% endblock %}

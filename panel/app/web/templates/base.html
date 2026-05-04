@@ -1,48 +1,52 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>{{ gateway_name|default("gateway") }} — {% block title %}panel{% endblock %}</title>
+    <title>{{ gateway_name }} — {% block title %}panel{% endblock %}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<nav class="container-fluid">
-    <ul>
-        <li><strong>{{ gateway_name|default("gateway") }}</strong></li>
-    </ul>
-    <ul>
-        <li><a href="/">overview</a></li>
-        <li><a href="/peers">peers</a></li>
-        <li><a href="/hosts">hosts</a></li>
-        <li><a href="/settings">settings</a></li>
-        <li><a href="/audit">audit</a></li>
-        <li>
-            <form method="post" action="/logout" style="display:inline">
-                <button class="secondary outline" type="submit">logout</button>
-            </form>
-        </li>
-    </ul>
-</nav>
-
-<main class="container">
-    {% if dirty %}
-    <article class="dirty-banner">
-        <strong>Pending changes.</strong> The running ruleset doesn't reflect your edits yet.
-        <form method="post" action="/apply" style="display:inline">
-            <button type="submit">Apply</button>
+<div class="app">
+    <aside class="sidebar">
+        <div class="brand">{{ gateway_name }}</div>
+        <nav>
+            {% set active = request.url.path %}
+            <a href="/"         class="{{ 'active' if active == '/' }}">Overview</a>
+            <a href="/peers"    class="{{ 'active' if active.startswith('/peers') }}">Peers</a>
+            <a href="/hosts"    class="{{ 'active' if active.startswith('/hosts') }}">Hosts</a>
+            <a href="/settings" class="{{ 'active' if active.startswith('/settings') }}">Settings</a>
+            <a href="/audit"    class="{{ 'active' if active.startswith('/audit') }}">Audit</a>
+        </nav>
+        <div class="spacer"></div>
+        <div class="who">Logged in as <strong>{{ user|default("?") }}</strong></div>
+        <form method="post" action="/logout">
+            <button class="secondary outline logout" type="submit">Sign out</button>
         </form>
-    </article>
-    {% endif %}
-    {% if last_error %}
-    <article class="error-banner">
-        <strong>Last apply failed:</strong> <pre>{{ last_error }}</pre>
-    </article>
-    {% endif %}
+    </aside>
 
-    {% block content %}{% endblock %}
-</main>
+    <main class="content">
+        {% if dirty %}
+        <div class="banner banner-warn">
+            <span><strong>Pending changes.</strong> The running ruleset doesn't reflect your edits yet.</span>
+            <form method="post" action="/apply">
+                <button type="submit">Apply now</button>
+            </form>
+        </div>
+        {% endif %}
+        {% if last_error %}
+        <div class="banner banner-error">
+            <div>
+                <strong>Last apply failed.</strong>
+                <pre>{{ last_error }}</pre>
+            </div>
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+</div>
 </body>
 </html>

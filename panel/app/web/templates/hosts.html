@@ -1,69 +1,94 @@
 {% extends "base.html" %}
 {% block title %}hosts{% endblock %}
 {% block content %}
-<h2>Internal hosts</h2>
-<p class="muted">Discovered via ARP/neighbor on the LAN, plus manually-added static leases.</p>
 
-<article>
-    <header><strong>Add static host</strong></header>
-    <form method="post" action="/hosts">
-        <div class="grid">
-            <label>MAC <input name="mac" placeholder="aa:bb:cc:dd:ee:ff" required></label>
-            <label>IP  <input name="ip"  placeholder="192.168.100.50" required></label>
-            <label>Hostname <input name="hostname" placeholder="proxmox-01"></label>
-        </div>
-        <button type="submit">Add</button>
-    </form>
+<div class="page-header">
+    <div>
+        <h1>Internal hosts</h1>
+        <p class="subtitle">Discovered via ARP/neighbor on the LAN. Scanner runs every 30 seconds.</p>
+    </div>
+</div>
+
+<article class="card">
+    <header>Add static host</header>
+    <div class="body">
+        <form method="post" action="/hosts">
+            <div class="form-grid">
+                <label>MAC <input name="mac" placeholder="aa:bb:cc:dd:ee:ff" required></label>
+                <label>IP  <input name="ip"  placeholder="192.168.10.50" required></label>
+                <label>Hostname <input name="hostname" placeholder="optional"></label>
+            </div>
+            <div class="form-actions">
+                <button type="submit">Add host</button>
+            </div>
+        </form>
+    </div>
 </article>
 
-{% if not hosts %}
-<p class="muted">No hosts seen yet. The scanner runs every 30s.</p>
-{% else %}
-<table>
-    <thead>
-        <tr>
-            <th>MAC</th><th>IP</th><th>Hostname</th>
-            <th>Static</th><th>Blocked</th><th>Tor</th>
-            <th>Last seen</th><th></th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for h in hosts %}
-        <tr>
-            <td><code>{{ h.mac }}</code></td>
-            <td>
-                <form method="post" action="/hosts/{{ h.mac }}/ip">
-                    <input name="ip" value="{{ h.ip or '' }}" style="width:9rem;display:inline-block">
-                </form>
-            </td>
-            <td>{{ h.hostname or "" }}</td>
-            <td>
-                <form method="post" action="/hosts/{{ h.mac }}/toggle">
-                    <input type="hidden" name="field" value="static">
-                    <button class="{{ 'primary' if h.static else 'secondary outline' }}" type="submit">{{ 'fixed' if h.static else 'dhcp' }}</button>
-                </form>
-            </td>
-            <td>
-                <form method="post" action="/hosts/{{ h.mac }}/toggle">
-                    <input type="hidden" name="field" value="blocked">
-                    <button class="{{ 'contrast' if h.blocked else 'secondary outline' }}" type="submit">{{ 'YES' if h.blocked else 'no' }}</button>
-                </form>
-            </td>
-            <td>
-                <form method="post" action="/hosts/{{ h.mac }}/toggle">
-                    <input type="hidden" name="field" value="tor_routed">
-                    <button class="{{ 'primary' if h.tor_routed else 'secondary outline' }}" type="submit">{{ 'on' if h.tor_routed else 'off' }}</button>
-                </form>
-            </td>
-            <td><small>{{ h.last_seen or "—" }}</small></td>
-            <td>
-                <form method="post" action="/hosts/{{ h.mac }}/delete">
-                    <button class="contrast outline" type="submit">×</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% endif %}
+<article class="card">
+    <header>
+        <span>{{ hosts|length }} host{{ "s" if hosts|length != 1 }}</span>
+    </header>
+    {% if not hosts %}
+    <div class="body empty">
+        <h3>No hosts seen yet</h3>
+        <p>Hosts on the LAN will appear here as soon as they generate ARP traffic.</p>
+    </div>
+    {% else %}
+    <table class="data">
+        <thead>
+            <tr>
+                <th>MAC</th>
+                <th>IP</th>
+                <th>Hostname</th>
+                <th class="cell-tight">DHCP</th>
+                <th class="cell-tight">Blocked</th>
+                <th class="cell-tight">Tor</th>
+                <th>Last seen</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for h in hosts %}
+            <tr>
+                <td><code>{{ h.mac }}</code></td>
+                <td>
+                    <form method="post" action="/hosts/{{ h.mac }}/ip" class="inline-edit">
+                        <input name="ip" value="{{ h.ip or '' }}" placeholder="—">
+                        <button class="btn-sm" type="submit">Save</button>
+                    </form>
+                </td>
+                <td>{{ h.hostname or "" }}</td>
+                <td>
+                    <form method="post" action="/hosts/{{ h.mac }}/toggle" class="toggle-form">
+                        <input type="hidden" name="field" value="static">
+                        <button type="submit" class="switch {{ 'on' if h.static }}" aria-label="static lease"></button>
+                        <span class="muted" style="font-size:.78rem">{{ "fixed" if h.static else "dynamic" }}</span>
+                    </form>
+                </td>
+                <td>
+                    <form method="post" action="/hosts/{{ h.mac }}/toggle" class="toggle-form">
+                        <input type="hidden" name="field" value="blocked">
+                        <button type="submit" class="switch danger {{ 'on' if h.blocked }}" aria-label="block host"></button>
+                    </form>
+                </td>
+                <td>
+                    <form method="post" action="/hosts/{{ h.mac }}/toggle" class="toggle-form">
+                        <input type="hidden" name="field" value="tor_routed">
+                        <button type="submit" class="switch {{ 'on' if h.tor_routed }}" aria-label="route via tor"></button>
+                    </form>
+                </td>
+                <td class="muted" style="font-size:.82rem">{{ h.last_seen or "—" }}</td>
+                <td style="text-align:right">
+                    <form method="post" action="/hosts/{{ h.mac }}/delete">
+                        <button class="btn-sm btn-danger" type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</article>
+
 {% endblock %}

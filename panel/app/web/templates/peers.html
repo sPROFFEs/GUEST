@@ -1,64 +1,92 @@
 {% extends "base.html" %}
 {% block title %}peers{% endblock %}
 {% block content %}
-<h2>WireGuard peers</h2>
-<p class="muted">Live state from <code>wg show wg0</code>. Add/remove peers in WGDashboard; toggles + ACLs live here.</p>
+
+<div class="page-header">
+    <div>
+        <h1>Peers</h1>
+        <p class="subtitle">
+            Live state from <code>wg show wg0</code>.
+            Add or remove peers in <a href="http://{{ request.url.hostname }}:10086" target="_blank" rel="noopener">WGDashboard</a>;
+            labels, ACLs and toggles are managed here.
+        </p>
+    </div>
+</div>
 
 {% if not peers %}
-<article>No peers configured yet. Use WGDashboard to create them.</article>
+<div class="card">
+    <div class="body empty">
+        <h3>No peers yet</h3>
+        <p>Create your first peer in WGDashboard. Once it handshakes, it will show up here.</p>
+    </div>
+</div>
 {% else %}
-<table>
-    <thead>
-        <tr>
-            <th>Label</th>
-            <th>Peer IP</th>
-            <th>Endpoint</th>
-            <th>Handshake</th>
-            <th>RX / TX</th>
-            <th>Blocked</th>
-            <th>Tor</th>
-            <th>ACLs</th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for p in peers %}
-        <tr>
-            <td>
-                <form method="post" action="/peers/{{ p.pubkey }}/label">
-                    <input name="label" value="{{ p.label }}" placeholder="(no label)" style="width:10rem;display:inline-block">
-                </form>
-                <small class="muted"><code>{{ p.pubkey[:12] }}…</code></small>
-            </td>
-            <td><code>{{ p.peer_ip }}</code></td>
-            <td><code>{{ p.endpoint }}</code></td>
-            <td>
-                {% if p.handshake_age is none %}
-                    <span class="muted">never</span>
-                {% else %}
-                    {{ p.handshake_age }}s ago
-                {% endif %}
-            </td>
-            <td><small>{{ p.rx }} / {{ p.tx }}</small></td>
-            <td>
-                <form method="post" action="/peers/{{ p.pubkey }}/toggle">
-                    <input type="hidden" name="field" value="blocked">
-                    <button class="{{ 'contrast' if p.blocked else 'secondary outline' }}" type="submit">
-                        {{ 'YES' if p.blocked else 'no' }}
-                    </button>
-                </form>
-            </td>
-            <td>
-                <form method="post" action="/peers/{{ p.pubkey }}/toggle">
-                    <input type="hidden" name="field" value="tor_routed">
-                    <button class="{{ 'primary' if p.tor_routed else 'secondary outline' }}" type="submit">
-                        {{ 'on' if p.tor_routed else 'off' }}
-                    </button>
-                </form>
-            </td>
-            <td><a href="/peers/{{ p.pubkey }}/acl">edit</a></td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
+<div class="card">
+    <header>
+        <span>{{ peers|length }} peer{{ "s" if peers|length != 1 }}</span>
+    </header>
+    <table class="data">
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Label</th>
+                <th>Peer IP</th>
+                <th>Endpoint</th>
+                <th>Handshake</th>
+                <th>Traffic (rx / tx)</th>
+                <th class="cell-tight">Blocked</th>
+                <th class="cell-tight">Tor</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for p in peers %}
+            <tr>
+                <td>
+                    {% if p.handshake_age is none %}
+                        <span class="badge badge-muted">never</span>
+                    {% elif p.handshake_age < 180 %}
+                        <span class="badge badge-ok">online</span>
+                    {% elif p.handshake_age < 900 %}
+                        <span class="badge badge-warn">idle</span>
+                    {% else %}
+                        <span class="badge badge-muted">offline</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <form method="post" action="/peers/{{ p.pubkey }}/label" class="inline-edit">
+                        <input name="label" value="{{ p.label }}" placeholder="add a label">
+                        <button class="btn-sm" type="submit">Save</button>
+                    </form>
+                    <div class="muted mono" style="font-size:.72rem;margin-top:.25rem">{{ p.pubkey[:24] }}…</div>
+                </td>
+                <td><code>{{ p.peer_ip }}</code></td>
+                <td><code class="muted">{{ p.endpoint }}</code></td>
+                <td class="cell-tight">
+                    {% if p.handshake_age is none %}
+                        <span class="muted">—</span>
+                    {% else %}
+                        {{ p.handshake_age }}s ago
+                    {% endif %}
+                </td>
+                <td class="cell-tight muted">{{ p.rx | filesizeformat }} / {{ p.tx | filesizeformat }}</td>
+                <td>
+                    <form method="post" action="/peers/{{ p.pubkey }}/toggle" class="toggle-form">
+                        <input type="hidden" name="field" value="blocked">
+                        <button type="submit" class="switch danger {{ 'on' if p.blocked }}" aria-label="block peer"></button>
+                    </form>
+                </td>
+                <td>
+                    <form method="post" action="/peers/{{ p.pubkey }}/toggle" class="toggle-form">
+                        <input type="hidden" name="field" value="tor_routed">
+                        <button type="submit" class="switch {{ 'on' if p.tor_routed }}" aria-label="route via tor"></button>
+                    </form>
+                </td>
+                <td><a href="/peers/{{ p.pubkey }}/acl">ACLs →</a></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endif %}
 {% endblock %}

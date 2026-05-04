@@ -1,21 +1,56 @@
 {% extends "base.html" %}
 {% block title %}audit{% endblock %}
 {% block content %}
-<h2>Audit log</h2>
-<p class="muted">Last 200 events.</p>
 
-<table>
-    <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th><th>Detail</th></tr></thead>
-    <tbody>
-    {% for r in rows %}
-        <tr>
-            <td><small>{{ r.ts }}</small></td>
-            <td>{{ r.actor }}</td>
-            <td><code>{{ r.action }}</code></td>
-            <td><small>{{ r.target or "" }}</small></td>
-            <td><small>{{ r.detail or "" }}</small></td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
+<div class="page-header">
+    <div>
+        <h1>Audit log</h1>
+        <p class="subtitle">Last 200 events.</p>
+    </div>
+</div>
+
+<article class="card">
+    {% if not rows %}
+    <div class="body empty">
+        <h3>Nothing to show</h3>
+        <p>Actions performed in the panel will appear here.</p>
+    </div>
+    {% else %}
+    <table class="data">
+        <thead>
+            <tr>
+                <th>When</th>
+                <th>Actor</th>
+                <th>Action</th>
+                <th>Target</th>
+                <th>Detail</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in rows %}
+            <tr>
+                <td class="cell-tight muted" style="font-size:.82rem">{{ r.ts }}</td>
+                <td>{{ r.actor }}</td>
+                <td>
+                    {% set parts = r.action.split('.') %}
+                    {% set last = parts[-1] %}
+                    {% if last == 'fail' %}
+                        <span class="badge badge-err">{{ r.action }}</span>
+                    {% elif last == 'ok' %}
+                        <span class="badge badge-ok">{{ r.action }}</span>
+                    {% elif last == 'delete' %}
+                        <span class="badge badge-warn">{{ r.action }}</span>
+                    {% else %}
+                        <span class="badge badge-info">{{ r.action }}</span>
+                    {% endif %}
+                </td>
+                <td class="muted" style="font-size:.82rem">{{ r.target or "" }}</td>
+                <td class="muted" style="font-size:.82rem">{{ r.detail or "" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</article>
+
 {% endblock %}

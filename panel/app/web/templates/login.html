@@ -1,27 +1,36 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>{{ gateway_name }} — login</title>
+    <title>{{ gateway_name }} — sign in</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
-<main class="container" style="max-width: 28rem; margin-top: 6rem;">
-    <hgroup>
-        <h2>{{ gateway_name }}</h2>
-        <p>Sign in to manage this gateway.</p>
-    </hgroup>
-    {% if error %}<article style="background:#5a1a1a;color:#fff;padding:.5rem 1rem;">{{ error }}</article>{% endif %}
-    <form method="post" action="/login">
-        <label>Username
-            <input type="text" name="username" autocomplete="username" required autofocus>
-        </label>
-        <label>Password
-            <input type="password" name="password" autocomplete="current-password" required>
-        </label>
-        <button type="submit">Sign in</button>
-    </form>
+<body style="background:var(--pico-background-color);">
+<main style="max-width:24rem;margin:6rem auto;padding:0 1rem;">
+    <article class="card">
+        <header style="display:flex;flex-direction:column;align-items:flex-start;background:transparent;border-bottom:1px solid var(--pico-card-border-color);">
+            <strong style="font-size:1.05rem">{{ gateway_name }}</strong>
+            <span class="muted" style="font-size:.85rem">Sign in to manage this gateway.</span>
+        </header>
+        <div class="body">
+            {% if error %}
+            <div class="banner banner-error" style="margin-bottom:1rem">
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+            <form method="post" action="/login">
+                <label>Username
+                    <input type="text" name="username" autocomplete="username" required autofocus>
+                </label>
+                <label>Password
+                    <input type="password" name="password" autocomplete="current-password" required>
+                </label>
+                <button type="submit" style="width:100%;margin-top:.5rem">Sign in</button>
+            </form>
+        </div>
+    </article>
 </main>
 </body>
 </html>
