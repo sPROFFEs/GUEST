@@ -23,6 +23,7 @@ PKGS=(
     iproute2 iputils-ping conntrack
     ca-certificates
     tcpdump
+    rsync
 )
 
 export DEBIAN_FRONTEND=noninteractive

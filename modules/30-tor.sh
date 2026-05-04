@@ -31,7 +31,7 @@ systemctl restart tor
 if ! ip rule show | grep -q 'fwmark 0x1 lookup 100'; then
     ip rule add fwmark 0x1 lookup 100
 fi
-if ! ip route show table 100 | grep -q '^local default'; then
+if ! ip route show table 100 2>/dev/null | grep -q '^local default'; then
     ip route add local 0.0.0.0/0 dev lo table 100
 fi
 
