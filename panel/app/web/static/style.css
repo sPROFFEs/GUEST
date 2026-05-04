@@ -153,6 +153,10 @@ body { font-feature-settings: "tnum"; }
 .card > .body > *:last-child { margin-bottom: 0; }
 
 /* ------- tables ------- */
+.table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
 table.data {
     width: 100%;
     border-collapse: collapse;
@@ -251,8 +255,8 @@ button.switch,
     padding: .3rem .55rem;
     height: auto;
     font-size: .88rem;
-    width: auto;
-    min-width: 9rem;
+    width: 9rem;
+    min-width: 0;
 }
 .inline-edit button {
     margin: 0;

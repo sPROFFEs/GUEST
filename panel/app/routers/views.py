@@ -59,8 +59,12 @@ def peers_view(request: Request, user: str = Depends(require_user)):
     now = int(datetime.now(timezone.utc).timestamp())
     for p in peers:
         p["handshake_age"] = (now - p["last_handshake"]) if p["last_handshake"] else None
+    flash = getattr(request.app.state, "peer_flash", None)
+    request.app.state.peer_flash = None
     return _templates.TemplateResponse("peers.html", {
-        "request": request, "user": user, "peers": peers, **_flags(request),
+        "request": request, "user": user, "peers": peers,
+        "peer_flash": flash,
+        **_flags(request),
     })
 
 

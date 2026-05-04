@@ -13,6 +13,13 @@
     </div>
 </div>
 
+{% if peer_flash %}
+<div class="banner {{ 'banner-error' if peer_flash[0] == 'error' else '' }}"
+     style="{{ '' if peer_flash[0] == 'error' else 'background:rgba(60,180,95,.10);color:#9fe6ad;border-color:#3cb45f;' }}margin-bottom:1rem">
+    <span>{{ peer_flash[1] }}</span>
+</div>
+{% endif %}
+
 {% if not peers %}
 <div class="card">
     <div class="body empty">
@@ -25,6 +32,7 @@
     <header>
         <span>{{ peers|length }} peer{{ "s" if peers|length != 1 }}</span>
     </header>
+    <div class="table-wrap">
     <table class="data">
         <thead>
             <tr>
@@ -87,6 +95,7 @@
         {% endfor %}
         </tbody>
     </table>
+    </div>
 </div>
 {% endif %}
 {% endblock %}

@@ -38,6 +38,7 @@
         <p>Hosts on the LAN will appear here as soon as they generate ARP traffic.</p>
     </div>
     {% else %}
+    <div class="table-wrap">
     <table class="data">
         <thead>
             <tr>
@@ -91,6 +92,7 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
     {% endif %}
 </article>
 
