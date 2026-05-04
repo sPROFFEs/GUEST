@@ -5,8 +5,11 @@
 <div class="page-header">
     <div>
         <h1>Internal hosts</h1>
-        <p class="subtitle">Discovered via ARP/neighbor on the LAN. Scanner runs every 30 seconds.</p>
+        <p class="subtitle">From the dnsmasq lease file plus the kernel neighbor table. Scanner runs every 30 seconds.</p>
     </div>
+    <form method="post" action="/hosts/scan">
+        <button type="submit" class="secondary outline">Scan now</button>
+    </form>
 </div>
 
 <article class="card">

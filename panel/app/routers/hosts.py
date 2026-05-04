@@ -17,6 +17,19 @@ def api_list(request: Request, user: str = Depends(require_user)):
     return {"hosts": [dict(r) for r in rows]}
 
 
+@router.post("/hosts/scan")
+def scan_now(request: Request, user: str = Depends(require_user)):
+    """Run the scanner inline (no waiting for the systemd timer)."""
+    from app.services.scanner import scan, upsert_into_db
+    conn = request.app.state.db
+    cfg = request.app.state.cfg
+    discoveries = scan(cfg.lan_iface)
+    with dbmod.transaction(conn):
+        upsert_into_db(conn, discoveries)
+        dbmod.audit(conn, user, "host.scan", detail=f"{len(discoveries)} found")
+    return RedirectResponse(url="/hosts", status_code=303)
+
+
 @router.post("/hosts")
 def create(
     mac: str = Form(...),
