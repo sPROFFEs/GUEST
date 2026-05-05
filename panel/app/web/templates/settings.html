@@ -10,18 +10,31 @@
 </div>
 
 <article class="card">
-    <header>Module toggles</header>
+    <header>Service toggles</header>
     <div class="body">
         <p class="muted" style="margin:0 0 1rem">
-            Disabling a module stops its service immediately. The setting is persisted
-            and survives reboots.
+            These switches start or stop the underlying daemon. They do <strong>not</strong>
+            route traffic on their own — to send a specific peer or host through Tor,
+            use the per-row toggle on
+            <a href="/peers">Peers</a> or <a href="/hosts">Hosts</a>.
         </p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.75rem;">
+        {% set labels = {
+            'wg_enabled':   ('WireGuard service',  'Tunnel for remote peers (wg-quick@wg0).'),
+            'tor_enabled':  ('Tor service',        'Daemon that carries marked traffic. Per-peer/host opt-in elsewhere.'),
+            'dhcp_enabled': ('DHCP / DNS service', 'dnsmasq for the internal LAN.'),
+        } %}
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:.75rem;">
             {% for key, value in settings.items() %}
-            <form method="post" action="/settings/toggle" class="toggle-form" style="justify-content:space-between;padding:.6rem .75rem;background:var(--pico-card-sectioning-background-color);border-radius:6px;">
+            {% set lbl = labels.get(key, (key, '')) %}
+            <form method="post" action="/settings/toggle" class="toggle-form"
+                  style="justify-content:space-between;padding:.7rem .85rem;background:var(--pico-card-sectioning-background-color);border-radius:6px;align-items:flex-start;">
                 <input type="hidden" name="key" value="{{ key }}">
-                <span>{{ key.replace('_enabled','').upper() }}</span>
-                <button type="submit" class="switch {{ 'on' if value }}" aria-label="toggle {{ key }}"></button>
+                <div style="display:flex;flex-direction:column;gap:.15rem">
+                    <span style="font-weight:500">{{ lbl[0] }}</span>
+                    <small class="muted" style="font-size:.78rem">{{ lbl[1] }}</small>
+                </div>
+                <button type="submit" class="switch {{ 'on' if value }}" aria-label="toggle {{ key }}"
+                        style="margin-top:.2rem"></button>
             </form>
             {% endfor %}
         </div>
