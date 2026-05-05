@@ -9,21 +9,30 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 apt-get install -y --no-install-recommends tor >/dev/null
 
-install -d -m 0755 /etc/tor/torrc.d
+# Inline our directives directly into /etc/tor/torrc rather than using
+# %include /etc/tor/torrc.d/. The include path tickles a sandbox/AppArmor
+# bug on Debian 12 + tor 0.4.9.6 where verify-config reads it fine but the
+# actual ExecStart fails with "Error reading included configuration file or
+# directory". Bypassing the include avoids it entirely.
+TORRC=/etc/tor/torrc
+BEGIN_TAG="# BEGIN gateway-installer (do not edit between these markers)"
+END_TAG="# END gateway-installer"
 
-cat > /etc/tor/torrc.d/gateway.conf <<EOF
-# Managed by gateway installer
+# Strip any previous block we wrote (idempotent re-runs) and any %include we
+# left behind from earlier installer revisions.
+sed -i "/^${BEGIN_TAG}\$/,/^${END_TAG}\$/d" "$TORRC"
+sed -i '\|^%include /etc/tor/torrc\.d|d' "$TORRC"
+# Best-effort cleanup of the now-orphaned drop-in we used to write.
+rm -f /etc/tor/torrc.d/gateway.conf 2>/dev/null || true
+
+cat >> "$TORRC" <<EOF
+${BEGIN_TAG}
 VirtualAddrNetworkIPv4 10.192.0.0/10
 AutomapHostsOnResolve 1
 TransPort 127.0.0.1:${TOR_TRANS_PORT} IsolateClientAddr IsolateClientProtocol
 DNSPort 127.0.0.1:${TOR_DNS_PORT}
+${END_TAG}
 EOF
-
-# Make sure main torrc includes our drop-in. Use an explicit glob — some Tor
-# versions don't recursively descend a bare directory path. We also strip any
-# previous variant we wrote ourselves so a re-run normalizes the line.
-sed -i '\|^%include /etc/tor/torrc\.d|d' /etc/tor/torrc 2>/dev/null || true
-echo '%include /etc/tor/torrc.d/*.conf' >> /etc/tor/torrc
 
 # On Debian, the meaningful unit is `tor@default.service`; `tor.service` is a
 # placeholder that depends on it. Enable/restart the right one — restarting
