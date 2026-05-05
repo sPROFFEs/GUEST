@@ -19,13 +19,19 @@ TransPort 127.0.0.1:${TOR_TRANS_PORT} IsolateClientAddr IsolateClientProtocol
 DNSPort 127.0.0.1:${TOR_DNS_PORT}
 EOF
 
-# Make sure main torrc includes our drop-in dir.
-if ! grep -q '%include /etc/tor/torrc.d' /etc/tor/torrc 2>/dev/null; then
-    echo '%include /etc/tor/torrc.d/' >> /etc/tor/torrc
-fi
+# Make sure main torrc includes our drop-in. Use an explicit glob — some Tor
+# versions don't recursively descend a bare directory path. We also strip any
+# previous variant we wrote ourselves so a re-run normalizes the line.
+sed -i '\|^%include /etc/tor/torrc\.d|d' /etc/tor/torrc 2>/dev/null || true
+echo '%include /etc/tor/torrc.d/*.conf' >> /etc/tor/torrc
 
+# On Debian, the meaningful unit is `tor@default.service`; `tor.service` is a
+# placeholder that depends on it. Enable/restart the right one — restarting
+# the placeholder won't actually pick up config changes.
+systemctl enable tor@default >/dev/null 2>&1 || true
+systemctl restart tor@default
+# Keep the metasservice in sync so `systemctl is-active tor` reflects reality.
 systemctl enable tor >/dev/null 2>&1 || true
-systemctl restart tor
 
 # Policy routing for marked traffic. Idempotent guards so re-runs don't error.
 if ! ip rule show | grep -q 'fwmark 0x1 lookup 100'; then

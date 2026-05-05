@@ -15,7 +15,9 @@ router = APIRouter()
 
 _SERVICE_FOR_TOGGLE = {
     "wg_enabled":   "wg-quick@wg0",
-    "tor_enabled":  "tor",
+    # Debian's tor.service is a placeholder; tor@default.service is the real
+    # daemon that listens on TransPort. Manage the real one.
+    "tor_enabled":  "tor@default",
     "dhcp_enabled": "dnsmasq",
 }
 

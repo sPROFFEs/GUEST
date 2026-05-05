@@ -164,6 +164,9 @@ gateway ALL=(root) NOPASSWD: /usr/sbin/nft -c -f /var/lib/gateway/render/*
 gateway ALL=(root) NOPASSWD: /usr/sbin/nft -c -f /etc/nftables.conf
 # Live ruleset apply.
 gateway ALL=(root) NOPASSWD: /usr/sbin/nft -f /etc/nftables.conf
+# Read-only inspection (used by dashboard diagnostics).
+gateway ALL=(root) NOPASSWD: /usr/sbin/nft list set inet gateway *
+gateway ALL=(root) NOPASSWD: /usr/sbin/nft list table inet gateway
 # Service control.
 gateway ALL=(root) NOPASSWD: /bin/systemctl reload nftables
 gateway ALL=(root) NOPASSWD: /bin/systemctl restart dnsmasq
@@ -171,6 +174,9 @@ gateway ALL=(root) NOPASSWD: /bin/systemctl is-active *
 gateway ALL=(root) NOPASSWD: /bin/systemctl status *
 gateway ALL=(root) NOPASSWD: /bin/systemctl start tor
 gateway ALL=(root) NOPASSWD: /bin/systemctl stop tor
+gateway ALL=(root) NOPASSWD: /bin/systemctl start tor@default
+gateway ALL=(root) NOPASSWD: /bin/systemctl stop tor@default
+gateway ALL=(root) NOPASSWD: /bin/systemctl restart tor@default
 gateway ALL=(root) NOPASSWD: /bin/systemctl start wg-quick@wg0
 gateway ALL=(root) NOPASSWD: /bin/systemctl stop wg-quick@wg0
 gateway ALL=(root) NOPASSWD: /bin/systemctl start dnsmasq

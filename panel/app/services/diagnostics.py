@@ -66,8 +66,15 @@ def tor_health(tor_trans_port: int = 9040) -> List[Tuple[str, str, str]]:
     """Returns a list of (name, level, message) tuples for the Tor pipeline."""
     out: List[Tuple[str, str, str]] = []
 
-    if _service_active("tor"):
-        out.append(("Tor service", "ok", "running"))
+    # `tor.service` on Debian is just a placeholder; `tor@default.service` is
+    # the unit that actually listens. Check both — the meaningful one is
+    # tor@default.
+    real_active = _service_active("tor@default")
+    if real_active:
+        out.append(("Tor service", "ok", "tor@default running"))
+    elif _service_active("tor"):
+        out.append(("Tor service", "warn",
+                    "tor.service active but tor@default isn't — placeholder running, no daemon"))
     else:
         out.append(("Tor service", "err", "not running — turn it on in Settings"))
 
