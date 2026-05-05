@@ -49,6 +49,12 @@
             </div>
         </header>
 
+        {% if tor_warning %}
+        <div class="banner banner-warn" style="margin-bottom:1rem">
+            <span><strong>Tor mismatch.</strong> {{ tor_warning }}</span>
+        </div>
+        {% endif %}
+
         {% block content %}{% endblock %}
     </main>
 </div>

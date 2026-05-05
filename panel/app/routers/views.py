@@ -44,6 +44,31 @@ def _pending_count(conn) -> int:
     return int(row["c"])
 
 
+def _tor_inconsistency(conn) -> str | None:
+    """Return a human-readable warning when Tor service is OFF but at least one
+    peer or host is still flagged tor_routed=1. Their traffic would be marked
+    on next Apply and then dropped (TransPort isn't listening) — fail-closed
+    by design but easy to miss."""
+    if dbmod.get_setting(conn, "tor_enabled", "false") == "true":
+        return None
+    peer_count = conn.execute(
+        "SELECT COUNT(*) AS c FROM peer_meta WHERE tor_routed=1"
+    ).fetchone()["c"]
+    host_count = conn.execute(
+        "SELECT COUNT(*) AS c FROM internal_hosts WHERE tor_routed=1"
+    ).fetchone()["c"]
+    total = peer_count + host_count
+    if total == 0:
+        return None
+    parts = []
+    if peer_count: parts.append(f"{peer_count} peer{'s' if peer_count != 1 else ''}")
+    if host_count: parts.append(f"{host_count} host{'s' if host_count != 1 else ''}")
+    return (
+        f"Tor service is disabled but { ' and '.join(parts) } are flagged to route via Tor. "
+        f"Their traffic will be dropped after Apply — turn the Tor service on in Settings."
+    )
+
+
 def _flags(request: Request) -> dict:
     conn = request.app.state.db
     return {
@@ -51,6 +76,7 @@ def _flags(request: Request) -> dict:
         "last_error": getattr(request.app.state, "last_error", None),
         "gateway_name": request.app.state.cfg.gateway_name,
         "pending_count": _pending_count(conn),
+        "tor_warning": _tor_inconsistency(conn),
     }
 
 

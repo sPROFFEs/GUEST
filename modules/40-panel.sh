@@ -159,12 +159,23 @@ EOF
 # This is the privilege boundary. Anything the applier needs to run as root
 # goes here, nothing else.
 cat > /etc/sudoers.d/gateway-panel <<'EOF'
+# Validation (read-only) — staged renders before swap, plus the full ruleset.
+gateway ALL=(root) NOPASSWD: /usr/sbin/nft -c -f /var/lib/gateway/render/*
 gateway ALL=(root) NOPASSWD: /usr/sbin/nft -c -f /etc/nftables.conf
+# Live ruleset apply.
 gateway ALL=(root) NOPASSWD: /usr/sbin/nft -f /etc/nftables.conf
+# Service control.
 gateway ALL=(root) NOPASSWD: /bin/systemctl reload nftables
 gateway ALL=(root) NOPASSWD: /bin/systemctl restart dnsmasq
 gateway ALL=(root) NOPASSWD: /bin/systemctl is-active *
 gateway ALL=(root) NOPASSWD: /bin/systemctl status *
+gateway ALL=(root) NOPASSWD: /bin/systemctl start tor
+gateway ALL=(root) NOPASSWD: /bin/systemctl stop tor
+gateway ALL=(root) NOPASSWD: /bin/systemctl start wg-quick@wg0
+gateway ALL=(root) NOPASSWD: /bin/systemctl stop wg-quick@wg0
+gateway ALL=(root) NOPASSWD: /bin/systemctl start dnsmasq
+gateway ALL=(root) NOPASSWD: /bin/systemctl stop dnsmasq
+# Config swaps from staged renders.
 gateway ALL=(root) NOPASSWD: /usr/bin/install -m 0644 /var/lib/gateway/render/* /etc/nftables.d/50-panel.nft
 gateway ALL=(root) NOPASSWD: /usr/bin/install -m 0644 /var/lib/gateway/render/* /etc/dnsmasq.d/gateway-hosts.conf
 EOF
