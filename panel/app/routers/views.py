@@ -13,7 +13,7 @@ from app import db as dbmod
 from app.auth import require_user
 from app.routers.peers import _list as list_peers_with_meta
 from app.routers.settings import _SERVICE_FOR_TOGGLE
-from app.services import traffic
+from app.services import diagnostics, traffic
 
 router = APIRouter()
 _templates = Jinja2Templates(directory="app/web/templates")
@@ -116,12 +116,18 @@ def dashboard(request: Request, user: str = Depends(require_user)):
             "has_history": bool(history),
         })
 
+    # Tor pipeline health (only show the card if Tor is enabled or any
+    # peer/host has tor_routed=1 — otherwise it's noise on the dashboard).
+    show_tor_health = settings.get("tor_enabled") or _tor_inconsistency(conn) is not None
+    tor_checks = diagnostics.tor_health(cfg.tor_trans_port) if show_tor_health else []
+
     return _templates.TemplateResponse("dashboard.html", {
         "request": request, "user": user,
         "settings": settings, "services": services,
         "wan_iface": cfg.wan_iface, "lan_iface": cfg.lan_iface,
         "lan_cidr": cfg.lan_cidr, "wg_peer_cidr": cfg.wg_peer_cidr,
         "iface_cards": iface_cards,
+        "tor_checks": tor_checks,
         **_flags(request),
     })
 

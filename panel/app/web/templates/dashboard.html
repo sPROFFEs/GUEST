@@ -83,6 +83,38 @@
     </div>
 </article>
 
+{% if tor_checks %}
+<article class="card">
+    <header>Tor pipeline health</header>
+    <div class="body">
+        <p class="muted" style="margin:0 0 .75rem;font-size:.85rem">
+            For traffic from a peer or host to actually go through Tor, every check
+            below has to be green. Click <strong>Apply</strong> after toggling
+            <em>Tor</em> on a peer/host so its IP shows up in the nft set.
+        </p>
+        <table class="data">
+            <tbody>
+            {% for name, level, msg in tor_checks %}
+                <tr>
+                    <td class="cell-tight">{{ name }}</td>
+                    <td class="cell-tight">
+                        {% if level == 'ok' %}
+                            <span class="badge badge-ok">ok</span>
+                        {% elif level == 'warn' %}
+                            <span class="badge badge-warn">warn</span>
+                        {% else %}
+                            <span class="badge badge-err">fail</span>
+                        {% endif %}
+                    </td>
+                    <td class="muted" style="font-size:.85rem">{{ msg }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</article>
+{% endif %}
+
 <article class="card">
     <header>Module toggles</header>
     <div class="body">

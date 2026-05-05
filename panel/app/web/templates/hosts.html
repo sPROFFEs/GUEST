@@ -5,7 +5,7 @@
 <div class="page-header">
     <div>
         <h1>Internal hosts</h1>
-        <p class="subtitle">From the dnsmasq lease file plus the kernel neighbor table. Scanner runs every 30 seconds.</p>
+        <p class="subtitle">Devices on the LAN behind this gateway. Discovered via DHCP leases + ARP.</p>
     </div>
     <form method="post" action="/hosts/scan">
         <button type="submit" class="secondary outline">Scan now</button>
@@ -13,12 +13,38 @@
 </div>
 
 <article class="card">
+    <header>How to read the table</header>
+    <div class="body" style="font-size:.9rem">
+        <ul style="margin:0;padding-left:1.25rem">
+            <li><strong>Reserved = OFF</strong> (dynamic): the host gets whatever IP the DHCP pool
+                hands it. The IP shown here mirrors the current lease and updates on every scan
+                — you can't edit it, since dnsmasq decides.</li>
+            <li><strong>Reserved = ON</strong> (fixed): we write a <code>dhcp-host=MAC,IP</code>
+                line for this MAC. The host gets that exact IP on every renew. Edit the IP and
+                press <code>✓</code> to save.</li>
+            <li><strong>Blocked</strong>: drops outbound forward traffic from this host. It can
+                still talk to the gateway itself for DHCP/DNS.</li>
+            <li><strong>Tor</strong>: marks this host's outbound traffic so it goes through the
+                local Tor TransPort. Requires the Tor service to be running.</li>
+        </ul>
+        <p class="muted" style="margin:.6rem 0 0">
+            Toggle changes affect the database immediately. To translate them into actual nft /
+            dnsmasq rules, press <strong>Apply</strong> in the topbar.
+        </p>
+    </div>
+</article>
+
+<article class="card">
     <header>Add static host</header>
     <div class="body">
+        <p class="muted" style="margin:0 0 .75rem;font-size:.85rem">
+            Pre-register a host you know but haven't seen yet. Adding it here marks it as
+            reserved automatically, so the IP is fixed from the first lease onwards.
+        </p>
         <form method="post" action="/hosts">
             <div class="form-grid">
-                <label>MAC <input name="mac" placeholder="aa:bb:cc:dd:ee:ff" required></label>
-                <label>IP  <input name="ip"  placeholder="192.168.10.50" required></label>
+                <label>MAC <input name="mac" placeholder="aa:bb:cc:dd:ee:ff" required pattern="^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$"></label>
+                <label>IP  <input name="ip"  placeholder="192.168.10.50" required oninput="validateCIDR(this)"></label>
                 <label>Hostname <input name="hostname" placeholder="optional"></label>
             </div>
             <div class="form-actions">
@@ -45,7 +71,7 @@
                 <th class="sortable" onclick="sortTable(this)">MAC</th>
                 <th class="sortable" onclick="sortTable(this)">IP</th>
                 <th class="sortable" onclick="sortTable(this)">Hostname</th>
-                <th class="cell-tight">DHCP</th>
+                <th class="cell-tight">Reserved</th>
                 <th class="cell-tight">Blocked</th>
                 <th class="cell-tight">Tor</th>
                 <th class="sortable" onclick="sortTable(this)">Last seen</th>
@@ -57,17 +83,24 @@
             <tr>
                 <td class="cell-tight"><code>{{ h.mac }}</code></td>
                 <td class="cell-tight">
+                    {% if h.static %}
                     <form method="post" action="/hosts/{{ h.mac }}/ip" class="inline-edit">
-                        <input name="ip" value="{{ h.ip or '' }}" placeholder="—">
-                        <button class="btn-sm" type="submit" title="Save IP">✓</button>
+                        <input name="ip" value="{{ h.ip or '' }}" placeholder="—" oninput="validateCIDR(this)">
+                        <button class="btn-sm" type="submit" title="Save reserved IP">✓</button>
                     </form>
+                    {% else %}
+                    <span class="mono" style="font-size:.85rem"
+                          title="Current DHCP lease — read-only because this host isn't reserved.">
+                        {{ h.ip or "—" }}
+                    </span>
+                    {% endif %}
                 </td>
                 <td class="truncate" title="{{ h.hostname }}">{{ h.hostname or "" }}</td>
                 <td class="cell-tight">
                     <form method="post" action="/hosts/{{ h.mac }}/toggle" class="toggle-form">
                         <input type="hidden" name="field" value="static">
-                        <button type="submit" class="switch {{ 'on' if h.static }}" aria-label="static lease"
-                                title="{{ 'fixed' if h.static else 'dynamic' }}"></button>
+                        <button type="submit" class="switch {{ 'on' if h.static }}" aria-label="reserved lease"
+                                title="{{ 'Reserved (fixed IP)' if h.static else 'Dynamic (pool-assigned, IP can rotate)' }}"></button>
                     </form>
                 </td>
                 <td class="cell-tight">

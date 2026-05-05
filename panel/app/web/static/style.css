@@ -262,8 +262,14 @@ button.switch,
     padding: .25rem .5rem;
     height: auto;
     font-size: .85rem;
-    width: 7.5rem;
+    width: 10rem;
     min-width: 0;
+}
+.inline-edit input[readonly] {
+    background: transparent;
+    border-color: transparent;
+    color: var(--pico-color);
+    cursor: default;
 }
 .inline-edit button {
     margin: 0;
