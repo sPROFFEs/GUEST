@@ -5,6 +5,14 @@ set -euo pipefail
 
 : "${TOR_TRANS_PORT:?}"
 : "${TOR_DNS_PORT:?}"
+: "${GATEWAY_LAN_CIDR:?}"
+: "${GATEWAY_LAN_IFACE:?}"
+
+# nft `redirect to :PORT` rewrites the destination to the *input interface's*
+# IP, not 127.0.0.1. So packets from internal-LAN hosts marked for Tor end up
+# at <LAN_IP>:9040 — Tor must be listening there. Extract the LAN IP from the
+# CIDR we know.
+LAN_IP="${GATEWAY_LAN_CIDR%/*}"
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get install -y --no-install-recommends tor >/dev/null
@@ -29,8 +37,13 @@ cat >> "$TORRC" <<EOF
 ${BEGIN_TAG}
 VirtualAddrNetworkIPv4 10.192.0.0/10
 AutomapHostsOnResolve 1
+# Two binds:
+#   127.0.0.1   — for the gateway itself if it ever wants to use Tor
+#   ${LAN_IP}   — target of nft REDIRECT for marked LAN-host traffic
 TransPort 127.0.0.1:${TOR_TRANS_PORT} IsolateClientAddr IsolateClientProtocol
+TransPort ${LAN_IP}:${TOR_TRANS_PORT} IsolateClientAddr IsolateClientProtocol
 DNSPort 127.0.0.1:${TOR_DNS_PORT}
+DNSPort ${LAN_IP}:${TOR_DNS_PORT}
 ${END_TAG}
 EOF
 
@@ -83,13 +96,26 @@ table inet gateway {
     }
 
     chain prerouting_nat {
+        # REDIRECT rewrites destination to the input interface IP + this port.
+        # Tor is configured to listen on that IP (see TransPort/DNSPort lines
+        # in /etc/tor/torrc).
         meta mark 0x1 ip protocol tcp redirect to :${TOR_TRANS_PORT}
         meta mark 0x1 udp dport 53 redirect to :${TOR_DNS_PORT}
         meta mark 0x1 meta l4proto udp drop
     }
 
+    chain input {
+        # Accept the redirected traffic — it's now destined for the gateway's
+        # LAN IP on the Tor ports. Without these rules input drops it
+        # (default policy) and the host gets connection refused.
+        iifname "${GATEWAY_LAN_IFACE}" meta mark 0x1 tcp dport ${TOR_TRANS_PORT} accept
+        iifname "${GATEWAY_LAN_IFACE}" meta mark 0x1 udp dport ${TOR_DNS_PORT} accept
+    }
+
     chain forward {
-        # Marked traffic goes through Tor on lo; never let it leak via WAN.
+        # Marked traffic should never reach forward — it gets caught by the
+        # REDIRECT in prerouting_nat. This is a safety net: if marking ever
+        # happens but redirection doesn't, drop instead of leaking via WAN.
         meta mark 0x1 oifname != "lo" drop
     }
 }
