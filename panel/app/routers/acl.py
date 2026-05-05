@@ -54,6 +54,19 @@ def add(
     return RedirectResponse(url=f"/peers/{pubkey}/acl", status_code=303)
 
 
+@router.post("/acl/{rule_id}/toggle")
+def toggle(rule_id: int, request: Request, user: str = Depends(require_user)):
+    conn = request.app.state.db
+    row = conn.execute("SELECT peer_pubkey FROM acl_rules WHERE id=?", (rule_id,)).fetchone()
+    if not row:
+        raise HTTPException(404, "not found")
+    with dbmod.transaction(conn):
+        conn.execute("UPDATE acl_rules SET enabled = 1 - enabled WHERE id=?", (rule_id,))
+        dbmod.mark_dirty(conn)
+        dbmod.audit(conn, user, "acl.toggle", target=str(rule_id))
+    return RedirectResponse(url=f"/peers/{row['peer_pubkey']}/acl", status_code=303)
+
+
 @router.post("/acl/{rule_id}/delete")
 def delete(rule_id: int, request: Request, user: str = Depends(require_user)):
     conn = request.app.state.db

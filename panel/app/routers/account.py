@@ -33,7 +33,26 @@ def change_password(
 
     new_hash = auth.hash_password(new_password)
     with dbmod.transaction(conn):
-        conn.execute("UPDATE users SET pw_hash=? WHERE username=?", (new_hash, user))
+        # Bump pw_version so every existing session for this user is rejected
+        # on its next request (including the cookie that submitted this form).
+        conn.execute(
+            "UPDATE users SET pw_hash=?, pw_version = pw_version + 1 WHERE username=?",
+            (new_hash, user),
+        )
         dbmod.audit(conn, user, "user.password_changed")
 
-    return _flash("ok", "Password updated.")
+    # Re-issue a session with the new pw_version so the current admin doesn't
+    # get instantly logged out after the operation they just performed.
+    row = conn.execute("SELECT pw_version FROM users WHERE username=?", (user,)).fetchone()
+    sm: auth.SessionManager = request.app.state.sessions
+    new_token = sm.issue(user, pw_version=int(row["pw_version"]))
+    resp = _flash("ok", "Password updated.")
+    resp.set_cookie(
+        auth.SessionManager.COOKIE_NAME,
+        new_token,
+        httponly=True,
+        samesite="strict",
+        secure=request.url.scheme == "https",
+        max_age=60 * 60 * 12,
+    )
+    return resp

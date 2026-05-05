@@ -16,10 +16,31 @@ def connect(db_path: Path) -> sqlite3.Connection:
 
 
 def init_db(db_path: Path, migrations_dir: Path) -> None:
+    """Apply migrations whose version isn't recorded in schema_version yet.
+
+    Migration files are named `NNNN_*.sql` where NNNN is the integer version.
+    schema_version (created in 0001) tracks what's been applied, so re-running
+    init on a healthy DB is a fast no-op rather than re-executing DDL that
+    would raise (e.g. duplicate column).
+    """
+    import re
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = connect(db_path)
     try:
+        # Make sure the bookkeeping table exists before we query it. The very
+        # first migration creates it too, but the query below needs it now.
+        conn.executescript(
+            "CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY);"
+        )
+        applied = {row["version"] for row in conn.execute("SELECT version FROM schema_version")}
+
         for sql_file in sorted(migrations_dir.glob("*.sql")):
+            m = re.match(r"^(\d+)_", sql_file.name)
+            if not m:
+                continue
+            version = int(m.group(1))
+            if version in applied:
+                continue
             conn.executescript(sql_file.read_text())
     finally:
         conn.close()

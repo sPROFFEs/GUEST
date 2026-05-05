@@ -6,11 +6,10 @@
     <div>
         <h1>Peers</h1>
         <p class="subtitle">
-            Live state from <code>wg show wg0</code>.
-            Add or remove peers in <a href="http://{{ request.url.hostname }}:10086" target="_blank" rel="noopener">WGDashboard</a>;
-            labels, ACLs and toggles are managed here.
+            Live state from <code>wg show wg0</code>. Labels, ACLs and toggles are managed here.
         </p>
     </div>
+    <a href="//{{ request.url.hostname }}:10086" target="_blank" rel="noopener" class="cta-link">Open WGDashboard ↗</a>
 </div>
 
 {% if peer_flash %}
@@ -21,12 +20,17 @@
 {% endif %}
 
 {% if not peers %}
-<div class="card">
+<article class="card">
     <div class="body empty">
         <h3>No peers yet</h3>
-        <p>Create your first peer in WGDashboard. Once it handshakes, it will show up here.</p>
+        <p>WireGuard peers are created in <strong>WGDashboard</strong>.
+            Once a peer handshakes for the first time, it shows up here so you can label it,
+            block it, route it through Tor, or define what it can reach.</p>
+        <a href="//{{ request.url.hostname }}:10086" target="_blank" rel="noopener" class="cta-link">
+            Open WGDashboard to create a peer ↗
+        </a>
     </div>
-</div>
+</article>
 {% else %}
 <div class="card">
     <header>
@@ -36,12 +40,12 @@
     <table class="data">
         <thead>
             <tr>
-                <th>Status</th>
-                <th>Label</th>
-                <th>Peer IP</th>
+                <th class="sortable" onclick="sortTable(this)">Status</th>
+                <th class="sortable" onclick="sortTable(this)">Label</th>
+                <th class="sortable" onclick="sortTable(this)">Peer IP</th>
                 <th>Endpoint</th>
-                <th>Handshake</th>
-                <th>Traffic (rx / tx)</th>
+                <th class="sortable" onclick="sortTable(this)">Handshake</th>
+                <th class="sortable" onclick="sortTable(this)">Traffic (rx / tx)</th>
                 <th class="cell-tight">Blocked</th>
                 <th class="cell-tight">Tor</th>
                 <th></th>
@@ -70,11 +74,7 @@
                 <td class="cell-tight"><code>{{ p.peer_ip }}</code></td>
                 <td class="truncate"><code class="muted">{{ p.endpoint }}</code></td>
                 <td class="cell-tight muted" style="font-size:.82rem">
-                    {% if p.handshake_age is none %}
-                        —
-                    {% else %}
-                        {{ p.handshake_age }}s
-                    {% endif %}
+                    {% if p.handshake_age is none %}—{% else %}{{ p.handshake_age }}s{% endif %}
                 </td>
                 <td class="cell-tight muted" style="font-size:.82rem">{{ p.rx | filesizeformat }} / {{ p.tx | filesizeformat }}</td>
                 <td>

@@ -26,22 +26,22 @@ def verify_password(hash_: str, plain: str) -> bool:
 
 class SessionManager:
     """Stateless session via signed cookie. The secret lives in the DB so it
-    survives restarts but is unique per gateway."""
+    survives restarts but is unique per gateway. Tokens carry the user's
+    pw_version so password rotation invalidates old sessions immediately."""
 
     COOKIE_NAME = "gw_session"
 
     def __init__(self, secret: str) -> None:
         self._s = URLSafeSerializer(secret, salt="gateway-panel-session")
 
-    def issue(self, username: str) -> str:
-        return self._s.dumps({"u": username})
+    def issue(self, username: str, pw_version: int = 0) -> str:
+        return self._s.dumps({"u": username, "v": pw_version})
 
-    def read(self, token: Optional[str]) -> Optional[str]:
+    def read(self, token: Optional[str]) -> Optional[dict]:
         if not token:
             return None
         try:
-            data = self._s.loads(token)
-            return data.get("u")
+            return self._s.loads(token)
         except BadSignature:
             return None
 
@@ -70,10 +70,23 @@ def get_or_create_session_secret(conn: sqlite3.Connection) -> str:
 # --- FastAPI dependency ---
 
 def require_user(request: Request) -> str:
-    """Returns the authenticated username or raises 401."""
+    """Returns the authenticated username or raises 401.
+
+    Validates that the token's pw_version matches the user's current
+    pw_version in the DB — so rotating a password invalidates every
+    outstanding cookie for that user.
+    """
     sm: SessionManager = request.app.state.sessions
     token = request.cookies.get(SessionManager.COOKIE_NAME)
-    user = sm.read(token)
-    if not user:
+    data = sm.read(token)
+    if not data or "u" not in data:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="login required")
-    return user
+
+    username = data["u"]
+    token_v = int(data.get("v", 0))
+    row = request.app.state.db.execute(
+        "SELECT pw_version FROM users WHERE username=?", (username,)
+    ).fetchone()
+    if not row or int(row["pw_version"]) != token_v:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="session invalidated")
+    return username

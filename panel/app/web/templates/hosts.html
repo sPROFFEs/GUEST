@@ -35,20 +35,20 @@
     {% if not hosts %}
     <div class="body empty">
         <h3>No hosts seen yet</h3>
-        <p>Hosts on the LAN will appear here as soon as they generate ARP traffic.</p>
+        <p>Hosts on the LAN will appear here as soon as they generate ARP traffic or get a DHCP lease.</p>
     </div>
     {% else %}
     <div class="table-wrap">
     <table class="data">
         <thead>
             <tr>
-                <th>MAC</th>
-                <th>IP</th>
-                <th>Hostname</th>
+                <th class="sortable" onclick="sortTable(this)">MAC</th>
+                <th class="sortable" onclick="sortTable(this)">IP</th>
+                <th class="sortable" onclick="sortTable(this)">Hostname</th>
                 <th class="cell-tight">DHCP</th>
                 <th class="cell-tight">Blocked</th>
                 <th class="cell-tight">Tor</th>
-                <th>Last seen</th>
+                <th class="sortable" onclick="sortTable(this)">Last seen</th>
                 <th></th>
             </tr>
         </thead>
@@ -66,16 +66,17 @@
                 <td class="cell-tight">
                     <form method="post" action="/hosts/{{ h.mac }}/toggle" class="toggle-form">
                         <input type="hidden" name="field" value="static">
-                        <button type="submit" class="switch {{ 'on' if h.static }}" aria-label="static lease" title="{{ 'fixed' if h.static else 'dynamic' }}"></button>
+                        <button type="submit" class="switch {{ 'on' if h.static }}" aria-label="static lease"
+                                title="{{ 'fixed' if h.static else 'dynamic' }}"></button>
                     </form>
                 </td>
-                <td>
+                <td class="cell-tight">
                     <form method="post" action="/hosts/{{ h.mac }}/toggle" class="toggle-form">
                         <input type="hidden" name="field" value="blocked">
                         <button type="submit" class="switch danger {{ 'on' if h.blocked }}" aria-label="block host"></button>
                     </form>
                 </td>
-                <td>
+                <td class="cell-tight">
                     <form method="post" action="/hosts/{{ h.mac }}/toggle" class="toggle-form">
                         <input type="hidden" name="field" value="tor_routed">
                         <button type="submit" class="switch {{ 'on' if h.tor_routed }}" aria-label="route via tor"></button>
@@ -83,7 +84,8 @@
                 </td>
                 <td class="cell-tight muted" style="font-size:.78rem">{{ h.last_seen or "—" }}</td>
                 <td class="cell-tight" style="text-align:right">
-                    <form method="post" action="/hosts/{{ h.mac }}/delete" onsubmit="return confirm('Delete this host entry?')">
+                    <form method="post" action="/hosts/{{ h.mac }}/delete"
+                          onsubmit="return panelConfirm(this, 'Delete host {{ h.mac }}?')">
                         <button class="btn-sm btn-danger" type="submit" title="Delete">✕</button>
                     </form>
                 </td>

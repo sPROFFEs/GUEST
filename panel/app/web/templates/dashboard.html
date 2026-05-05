@@ -5,7 +5,7 @@
 <div class="page-header">
     <div>
         <h1>Overview</h1>
-        <p class="subtitle">Network identity and live module state.</p>
+        <p class="subtitle">Network identity, live module state, traffic.</p>
     </div>
 </div>
 
@@ -50,11 +50,45 @@
 </div>
 
 <article class="card">
+    <header>Traffic</header>
+    <div class="body">
+        {% if not iface_cards %}
+        <div class="empty">
+            <h3>No traffic data</h3>
+            <p>The interfaces aren't reporting counters yet.</p>
+        </div>
+        {% else %}
+        <p class="muted" style="margin:0 0 .75rem;font-size:.85rem">
+            Lifetime totals from <code>/proc/net/dev</code>. Sparklines show the last
+            24 hours from <code>vnstat</code> (only present if the
+            <strong>monitoring</strong> module is enabled).
+        </p>
+        {% for ic in iface_cards %}
+        <div class="traffic-iface">
+            <div class="iname"><code>{{ ic.name }}</code></div>
+            <div class="totals">
+                ↓ {{ ic.rx_total | filesizeformat }} &nbsp;&nbsp; ↑ {{ ic.tx_total | filesizeformat }}
+            </div>
+            {% if ic.has_history %}
+            <svg class="spark" viewBox="0 0 240 36" preserveAspectRatio="none"
+                 data-sparkline data-points="{{ ic.rx_series }}" data-color="#5b9cff"></svg>
+            {% else %}
+            <div class="muted" style="grid-column:1/3;font-size:.78rem">
+                No history (install monitoring module for charts).
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+</article>
+
+<article class="card">
     <header>Module toggles</header>
     <div class="body">
         <p class="muted" style="margin:0 0 .75rem">
             Service-level on/off. Firewall rule changes still need an explicit
-            <strong>Apply</strong> (banner appears at the top of the page).
+            <strong>Apply</strong> from the topbar.
         </p>
         <div style="display:flex;flex-wrap:wrap;gap:.75rem;">
             {% for key, value in settings.items() %}

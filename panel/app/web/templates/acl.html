@@ -16,7 +16,8 @@
         <form method="post" action="/peers/{{ pubkey }}/acl">
             <div class="form-grid">
                 <label>Destination
-                    <input name="dst_cidr" placeholder="192.168.100.211 or 192.168.100.0/24" required>
+                    <input name="dst_cidr" placeholder="192.168.100.211 or 192.168.100.0/24"
+                           required oninput="validateCIDR(this)">
                     <small class="muted">Single IP or subnet — the <code>/32</code> isn't required for hosts.</small>
                 </label>
                 <label>Protocol
@@ -27,7 +28,8 @@
                     </select>
                 </label>
                 <label>Port
-                    <input name="dport" placeholder="optional, e.g. 8006" inputmode="numeric">
+                    <input name="dport" placeholder="optional, e.g. 8006" inputmode="numeric"
+                           oninput="validatePort(this)">
                 </label>
                 <label>Action
                     <select name="action">
@@ -45,42 +47,58 @@
 </article>
 
 <article class="card">
-    <header>
-        <span>{{ rules|length }} rule{{ "s" if rules|length != 1 }}</span>
-    </header>
+    <header><span>{{ rules|length }} rule{{ "s" if rules|length != 1 }}</span></header>
     {% if not rules %}
     <div class="body empty">
         <h3>No rules</h3>
         <p>Without explicit rules this peer can reach <strong>nothing</strong> on the LAN.</p>
     </div>
     {% else %}
+    <div class="table-wrap">
     <table class="data">
         <thead>
-            <tr><th>#</th><th>Destination</th><th>Proto</th><th>Port</th><th>Action</th><th></th></tr>
+            <tr>
+                <th class="sortable" onclick="sortTable(this)">#</th>
+                <th class="sortable" onclick="sortTable(this)">Destination</th>
+                <th class="cell-tight">Proto</th>
+                <th class="cell-tight">Port</th>
+                <th class="cell-tight">Action</th>
+                <th class="cell-tight">Enabled</th>
+                <th></th>
+            </tr>
         </thead>
         <tbody>
             {% for r in rules %}
             <tr>
-                <td class="muted">{{ r.id }}</td>
-                <td><code>{{ r.dst_cidr }}</code></td>
-                <td>{{ r.proto }}</td>
-                <td>{{ r.dport or "—" }}</td>
-                <td>
+                <td class="cell-tight muted">{{ r.id }}</td>
+                <td class="cell-tight"><code>{{ r.dst_cidr }}</code></td>
+                <td class="cell-tight">{{ r.proto }}</td>
+                <td class="cell-tight">{{ r.dport or "—" }}</td>
+                <td class="cell-tight">
                     {% if r.action == 'accept' %}
                         <span class="badge badge-ok">accept</span>
                     {% else %}
                         <span class="badge badge-err">drop</span>
                     {% endif %}
                 </td>
-                <td style="text-align:right">
-                    <form method="post" action="/acl/{{ r.id }}/delete">
-                        <button class="btn-sm btn-danger" type="submit">Delete</button>
+                <td class="cell-tight">
+                    <form method="post" action="/acl/{{ r.id }}/toggle" class="toggle-form">
+                        <button type="submit" class="switch {{ 'on' if r.enabled }}"
+                                aria-label="toggle rule"
+                                title="{{ 'active' if r.enabled else 'paused' }}"></button>
+                    </form>
+                </td>
+                <td class="cell-tight" style="text-align:right">
+                    <form method="post" action="/acl/{{ r.id }}/delete"
+                          onsubmit="return panelConfirm(this, 'Delete this rule?')">
+                        <button class="btn-sm btn-danger" type="submit" title="Delete">✕</button>
                     </form>
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+    </div>
     {% endif %}
 </article>
 

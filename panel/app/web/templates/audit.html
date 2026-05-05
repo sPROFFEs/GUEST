@@ -5,24 +5,46 @@
 <div class="page-header">
     <div>
         <h1>Audit log</h1>
-        <p class="subtitle">Last 200 events.</p>
+        <p class="subtitle">{{ total }} event{{ "s" if total != 1 }} total.</p>
     </div>
 </div>
 
 <article class="card">
+    <header>
+        <form method="get" action="/audit" class="filters" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:0">
+            <select name="actor">
+                <option value="">all actors</option>
+                {% for a in actors %}
+                <option value="{{ a }}" {% if a == filter_actor %}selected{% endif %}>{{ a }}</option>
+                {% endfor %}
+            </select>
+            <select name="action">
+                <option value="">all actions</option>
+                {% for a in action_prefixes %}
+                <option value="{{ a }}" {% if a == filter_action %}selected{% endif %}>{{ a }}.*</option>
+                {% endfor %}
+            </select>
+            <input name="q" value="{{ filter_q }}" placeholder="search target/detail" style="min-width:14rem">
+            <button class="btn-sm" type="submit">Filter</button>
+            {% if filter_actor or filter_action or filter_q %}
+            <a href="/audit" class="muted" style="font-size:.82rem">clear</a>
+            {% endif %}
+        </form>
+    </header>
     {% if not rows %}
     <div class="body empty">
-        <h3>Nothing to show</h3>
-        <p>Actions performed in the panel will appear here.</p>
+        <h3>No events match</h3>
+        <p>Try clearing the filter or perform an action somewhere in the panel.</p>
     </div>
     {% else %}
+    <div class="table-wrap">
     <table class="data">
         <thead>
             <tr>
-                <th>When</th>
-                <th>Actor</th>
-                <th>Action</th>
-                <th>Target</th>
+                <th class="sortable" onclick="sortTable(this)">When</th>
+                <th class="sortable" onclick="sortTable(this)">Actor</th>
+                <th class="sortable" onclick="sortTable(this)">Action</th>
+                <th class="sortable" onclick="sortTable(this)">Target</th>
                 <th>Detail</th>
             </tr>
         </thead>
@@ -30,10 +52,9 @@
             {% for r in rows %}
             <tr>
                 <td class="cell-tight muted" style="font-size:.82rem">{{ r.ts }}</td>
-                <td>{{ r.actor }}</td>
-                <td>
-                    {% set parts = r.action.split('.') %}
-                    {% set last = parts[-1] %}
+                <td class="cell-tight">{{ r.actor }}</td>
+                <td class="cell-tight">
+                    {% set last = r.action.split('.')[-1] %}
                     {% if last == 'fail' %}
                         <span class="badge badge-err">{{ r.action }}</span>
                     {% elif last == 'ok' %}
@@ -44,12 +65,22 @@
                         <span class="badge badge-info">{{ r.action }}</span>
                     {% endif %}
                 </td>
-                <td class="muted" style="font-size:.82rem">{{ r.target or "" }}</td>
+                <td class="truncate muted" style="font-size:.82rem" title="{{ r.target }}">{{ r.target or "" }}</td>
                 <td class="muted" style="font-size:.82rem">{{ r.detail or "" }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+    </div>
+
+    <div class="pager">
+        <span>Page {{ page }} of {{ pages }} — showing {{ rows|length }} of {{ total }}</span>
+        <span>
+            {% set base = "/audit?actor=" + filter_actor + "&action=" + filter_action + "&q=" + filter_q %}
+            <a href="{{ base }}&page={{ page - 1 }}" class="{{ 'disabled' if page <= 1 }}">← prev</a>
+            <a href="{{ base }}&page={{ page + 1 }}" class="{{ 'disabled' if page >= pages }}">next →</a>
+        </span>
+    </div>
     {% endif %}
 </article>
 

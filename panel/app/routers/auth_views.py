@@ -29,8 +29,10 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
             "gateway_name": request.app.state.cfg.gateway_name,
             "error": "Invalid credentials.",
         }, status_code=401)
+    row = conn.execute("SELECT pw_version FROM users WHERE username=?", (username,)).fetchone()
+    pw_version = int(row["pw_version"]) if row and "pw_version" in row.keys() else 0
     sm: auth.SessionManager = request.app.state.sessions
-    token = sm.issue(username)
+    token = sm.issue(username, pw_version=pw_version)
     resp = RedirectResponse(url="/", status_code=303)
     resp.set_cookie(
         auth.SessionManager.COOKIE_NAME,

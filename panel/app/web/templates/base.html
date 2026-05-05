@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/panel.js" defer></script>
 </head>
 <body>
 <div class="app">
@@ -14,12 +15,13 @@
         <div class="brand">{{ gateway_name }}</div>
         <nav>
             {% set active = request.url.path %}
-            <a href="/"         class="{{ 'active' if active == '/' }}">Overview</a>
+            <a href="/"           class="{{ 'active' if active == '/' }}">Overview</a>
             <a href="/peers"      class="{{ 'active' if active.startswith('/peers') }}">Peers</a>
             <a href="/hosts"      class="{{ 'active' if active.startswith('/hosts') }}">Hosts</a>
             <a href="/lan-egress" class="{{ 'active' if active.startswith('/lan-egress') }}">LAN egress</a>
+            <a href="/users"      class="{{ 'active' if active.startswith('/users') }}">Users</a>
             <a href="/settings"   class="{{ 'active' if active.startswith('/settings') }}">Settings</a>
-            <a href="/audit"    class="{{ 'active' if active.startswith('/audit') }}">Audit</a>
+            <a href="/audit"      class="{{ 'active' if active.startswith('/audit') }}">Audit</a>
         </nav>
         <div class="spacer"></div>
         <div class="who">Logged in as <strong>{{ user|default("?") }}</strong></div>
@@ -29,25 +31,36 @@
     </aside>
 
     <main class="content">
-        {% if dirty %}
-        <div class="banner banner-warn">
-            <span><strong>Pending changes.</strong> The running ruleset doesn't reflect your edits yet.</span>
-            <form method="post" action="/apply">
-                <button type="submit">Apply now</button>
-            </form>
-        </div>
-        {% endif %}
-        {% if last_error %}
-        <div class="banner banner-error">
+        <header class="topbar">
             <div>
-                <strong>Last apply failed.</strong>
-                <pre>{{ last_error }}</pre>
+                {% if last_error %}
+                <span class="topbar-error" title="{{ last_error }}">last apply failed — see Audit</span>
+                {% endif %}
             </div>
-        </div>
-        {% endif %}
+            <div class="topbar-actions">
+                {% if pending_count and pending_count > 0 %}
+                    <span class="topbar-pending">{{ pending_count }} pending change{{ 's' if pending_count != 1 }}</span>
+                    <form method="post" action="/apply">
+                        <button type="submit" class="topbar-apply">Apply now</button>
+                    </form>
+                {% else %}
+                    <span class="topbar-clean">All changes applied</span>
+                {% endif %}
+            </div>
+        </header>
 
         {% block content %}{% endblock %}
     </main>
 </div>
+
+<dialog id="confirm-modal">
+    <article>
+        <h3 id="confirm-modal-msg">Are you sure?</h3>
+        <footer>
+            <button class="secondary" id="confirm-modal-cancel" type="button">Cancel</button>
+            <button id="confirm-modal-ok" type="button">Confirm</button>
+        </footer>
+    </article>
+</dialog>
 </body>
 </html>

@@ -31,12 +31,19 @@ def _peers_meta(conn: sqlite3.Connection) -> dict:
     return {r["pubkey"]: dict(r) for r in rows}
 
 
-def _peer_ip_for(pubkey: str, allowed_ips_by_pk: dict) -> str | None:
-    a = allowed_ips_by_pk.get(pubkey)
-    if not a:
-        return None
-    first = a.split(",")[0].strip().split("/")[0]
-    return first or None
+def _peer_ips_for(pubkey: str, allowed_ips_by_pk: dict) -> list[str]:
+    """Every IPv4 the peer is allowed on. Empty if the peer isn't in wg show
+    (e.g. configured but never handshaked, or pubkey mismatch)."""
+    a = allowed_ips_by_pk.get(pubkey, "")
+    out: list[str] = []
+    for chunk in a.split(","):
+        chunk = chunk.strip()
+        if not chunk or ":" in chunk:   # skip empties and IPv6
+            continue
+        ip = chunk.split("/")[0]
+        if ip:
+            out.append(ip)
+    return out
 
 
 def render(conn: sqlite3.Connection, cfg: Config) -> Tuple[str, str]:
@@ -50,13 +57,13 @@ def render(conn: sqlite3.Connection, cfg: Config) -> Tuple[str, str]:
     blocked_peer_ips: list[str] = []
     tor_peer_ips: list[str] = []
     for pk, m in meta.items():
-        ip = _peer_ip_for(pk, allowed_by_pk)
-        if not ip:
+        ips = _peer_ips_for(pk, allowed_by_pk)
+        if not ips:
             continue
         if m["blocked"]:
-            blocked_peer_ips.append(ip)
+            blocked_peer_ips.extend(ips)
         if m["tor_routed"]:
-            tor_peer_ips.append(ip)
+            tor_peer_ips.extend(ips)
 
     hosts = conn.execute(
         "SELECT mac, ip, hostname, static, blocked, tor_routed FROM internal_hosts"
@@ -74,16 +81,15 @@ def render(conn: sqlite3.Connection, cfg: Config) -> Tuple[str, str]:
         "SELECT peer_pubkey, dst_cidr, proto, dport, action "
         "FROM acl_rules WHERE enabled=1"
     ).fetchall():
-        ip = _peer_ip_for(r["peer_pubkey"], allowed_by_pk)
-        if not ip:
-            continue
-        acls.append({
-            "src_ip": ip,
-            "dst_cidr": r["dst_cidr"],
-            "proto": r["proto"],
-            "dport": r["dport"],
-            "action": r["action"],
-        })
+        ips = _peer_ips_for(r["peer_pubkey"], allowed_by_pk)
+        for ip in ips:
+            acls.append({
+                "src_ip": ip,
+                "dst_cidr": r["dst_cidr"],
+                "proto": r["proto"],
+                "dport": r["dport"],
+                "action": r["action"],
+            })
 
     # LAN egress: restricted subnets + allowlist exceptions
     restricted = [
@@ -132,6 +138,19 @@ def _write_via_sudo(staged: Path, dst: Path) -> None:
 
 
 def apply(conn: sqlite3.Connection, cfg: Config, actor: str) -> None:
+    """Render config from DB, validate, swap, reload. Rolls back on failure.
+
+    Failure modes (in order of likelihood):
+      A. Render produced syntactically invalid nft (caught by standalone -c).
+         → nothing touched, raise.
+      B. Render is valid alone but the merged ruleset fails (caught by full -c).
+         → nothing touched, raise.
+      C. Apply succeeded but reload threw an unexpected error after the swap.
+         → restore from snapshot, reload again, raise.
+    """
+    import logging
+    log = logging.getLogger("gateway.apply")
+
     nft_text, dnsmasq_text = render(conn, cfg)
 
     cfg.render_dir.mkdir(parents=True, exist_ok=True)
@@ -140,13 +159,27 @@ def apply(conn: sqlite3.Connection, cfg: Config, actor: str) -> None:
     nft_staged.write_text(nft_text)
     dns_staged.write_text(dnsmasq_text)
 
-    # Validate: write nft to a temp path inside /etc/nftables.d (so the include
-    # picks it up) and run `nft -c -f` against the full ruleset.
+    # --- (A) Standalone syntax check on the rendered fragment. -----------
+    # Our render emits `flush set` / `add element` / `flush chain` / `table`
+    # blocks which are valid as a standalone nft script. Catches stupid
+    # mistakes (bad CIDR, missing field) before we touch production.
+    pre = subprocess.run(
+        ["sudo", "/usr/sbin/nft", "-c", "-f", str(nft_staged)],
+        capture_output=True, text=True,
+    )
+    if pre.returncode != 0:
+        msg = (pre.stderr or pre.stdout or "nft pre-check failed").strip()
+        log.warning("apply pre-check failed: %s", msg)
+        dbmod.audit(conn, actor, "apply.fail", detail=("[pre-check] " + msg)[:500])
+        raise ApplyError(f"Pre-check failed (nothing changed): {msg}")
+
     snap = _snapshot(cfg)
     try:
+        # --- swap into production ---
         _write_via_sudo(nft_staged, cfg.nft_panel_fragment)
         _write_via_sudo(dns_staged, cfg.dnsmasq_hosts)
 
+        # --- (B) full-ruleset validate + (C) actual reload ---
         subprocess.run(
             ["sudo", "/usr/sbin/nft", "-c", "-f", "/etc/nftables.conf"],
             check=True, capture_output=True, text=True,
@@ -160,16 +193,24 @@ def apply(conn: sqlite3.Connection, cfg: Config, actor: str) -> None:
             check=True, capture_output=True, text=True,
         )
     except subprocess.CalledProcessError as e:
-        # Rollback from snapshot
-        for name in ("50-panel.nft", "gateway-hosts.conf"):
+        msg = (e.stderr or e.stdout or str(e)).strip()
+        log.error("apply failed post-swap, rolling back: %s", msg)
+        # restore each saved file (snapshot may be empty if first run)
+        for name, target in (
+            ("50-panel.nft", cfg.nft_panel_fragment),
+            ("gateway-hosts.conf", cfg.dnsmasq_hosts),
+        ):
             saved = snap / name
-            target = cfg.nft_panel_fragment if name.endswith(".nft") else cfg.dnsmasq_hosts
             if saved.exists():
                 _write_via_sudo(saved, target)
-        subprocess.run(["sudo", "/usr/sbin/nft", "-f", "/etc/nftables.conf"], check=False)
-        subprocess.run(["sudo", "/bin/systemctl", "restart", "dnsmasq"], check=False)
-        dbmod.audit(conn, actor, "apply.fail", detail=(e.stderr or str(e))[:500])
-        raise ApplyError(e.stderr or str(e)) from e
+        # best-effort reload; don't mask the original error
+        subprocess.run(["sudo", "/usr/sbin/nft", "-f", "/etc/nftables.conf"],
+                       check=False, capture_output=True)
+        subprocess.run(["sudo", "/bin/systemctl", "restart", "dnsmasq"],
+                       check=False, capture_output=True)
+        dbmod.audit(conn, actor, "apply.fail", detail=("[post-swap] " + msg)[:500])
+        raise ApplyError(msg) from e
 
+    log.info("apply ok, snapshot=%s", snap)
     dbmod.audit(conn, actor, "apply.ok", target=str(snap))
     dbmod.mark_clean(conn)

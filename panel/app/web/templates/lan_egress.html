@@ -50,7 +50,7 @@
         <form method="post" action="/lan-egress/subnets" style="margin-bottom:1rem">
             <div class="form-grid">
                 <label>Network
-                    <input name="cidr" placeholder="192.168.100.0/24" required>
+                    <input name="cidr" placeholder="192.168.100.0/24" required oninput="validateCIDR(this)">
                     <small class="muted">Type a subnet (<code>192.168.100.0/24</code>) or a single IP — the slash isn't required.</small>
                 </label>
                 <label>Description
@@ -73,8 +73,8 @@
         <table class="data">
             <thead>
                 <tr>
-                    <th>CIDR</th>
-                    <th>Description</th>
+                    <th class="sortable" onclick="sortTable(this)">CIDR</th>
+                    <th class="sortable" onclick="sortTable(this)">Description</th>
                     <th class="cell-tight">Enabled</th>
                     <th></th>
                 </tr>
@@ -93,7 +93,7 @@
                     </td>
                     <td class="cell-tight" style="text-align:right">
                         <form method="post" action="/lan-egress/subnets/{{ s.cidr }}/delete"
-                              onsubmit="return confirm('Stop restricting {{ s.cidr }}?')">
+                              onsubmit="return panelConfirm(this, 'Stop restricting {{ s.cidr }}?')">
                             <button class="btn-sm btn-danger" type="submit" title="Delete">✕</button>
                         </form>
                     </td>
@@ -121,7 +121,7 @@
         <form method="post" action="/lan-egress/rules" style="margin-bottom:1rem">
             <div class="form-grid">
                 <label>Destination
-                    <input name="dst_cidr" placeholder="192.168.100.211 or 192.168.100.0/24" required>
+                    <input name="dst_cidr" placeholder="192.168.100.211 or 192.168.100.0/24" required oninput="validateCIDR(this)">
                     <small class="muted">Single IP or subnet — the <code>/32</code> isn't required for hosts.</small>
                 </label>
                 <label>Protocol
@@ -132,7 +132,7 @@
                     </select>
                 </label>
                 <label>Port
-                    <input name="dport" placeholder="optional, e.g. 8006" inputmode="numeric">
+                    <input name="dport" placeholder="optional, e.g. 8006" inputmode="numeric" oninput="validatePort(this)">
                 </label>
                 <label>Description
                     <input name="description" placeholder="Proxmox UI">
@@ -155,11 +155,11 @@
         <table class="data">
             <thead>
                 <tr>
-                    <th>#</th>
-                    <th>Destination</th>
+                    <th class="sortable" onclick="sortTable(this)">#</th>
+                    <th class="sortable" onclick="sortTable(this)">Destination</th>
                     <th class="cell-tight">Proto</th>
                     <th class="cell-tight">Port</th>
-                    <th>Description</th>
+                    <th class="sortable" onclick="sortTable(this)">Description</th>
                     <th class="cell-tight">Enabled</th>
                     <th></th>
                 </tr>
@@ -181,7 +181,7 @@
                     </td>
                     <td class="cell-tight" style="text-align:right">
                         <form method="post" action="/lan-egress/rules/{{ r.id }}/delete"
-                              onsubmit="return confirm('Delete this allow rule?')">
+                              onsubmit="return panelConfirm(this, 'Delete this allow rule?')">
                             <button class="btn-sm btn-danger" type="submit" title="Delete">✕</button>
                         </form>
                     </td>

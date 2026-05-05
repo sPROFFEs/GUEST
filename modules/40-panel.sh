@@ -81,14 +81,25 @@ if [[ "${PANEL_TLS:-false}" == "true" ]]; then
     CRT=/etc/gateway/tls/panel.crt
     KEY=/etc/gateway/tls/panel.key
     if [[ ! -s "$CRT" || ! -s "$KEY" ]]; then
+        # Build a SAN list that covers every realistic way an admin reaches
+        # the panel: gateway hostname, localhost (SSH-tunnel use case), the
+        # loopback IP, and every non-loopback IPv4 currently bound to the
+        # host (wg0, wan, lan iface).
+        SAN_HOSTS=("DNS:${GATEWAY_NAME}" "DNS:$(hostname -s)" "DNS:localhost")
+        SAN_IPS=("IP:127.0.0.1")
+        while read -r ip; do
+            [[ -n "$ip" ]] && SAN_IPS+=("IP:${ip}")
+        done < <(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | sort -u)
+        SAN_LIST="$(IFS=,; echo "${SAN_HOSTS[*]},${SAN_IPS[*]}")"
+
         openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
             -keyout "$KEY" -out "$CRT" \
             -subj "/CN=${GATEWAY_NAME}" \
-            -addext "subjectAltName=DNS:${GATEWAY_NAME},IP:${PANEL_BIND_ADDR}" \
+            -addext "subjectAltName=${SAN_LIST}" \
             >/dev/null 2>&1
         chown gateway:gateway "$CRT" "$KEY"
         chmod 0640 "$CRT" "$KEY"
-        echo "[40-panel] generated self-signed cert for ${GATEWAY_NAME}"
+        echo "[40-panel] generated self-signed cert with SANs: ${SAN_LIST}"
     fi
     UVICORN_TLS_ARGS="--ssl-keyfile=${KEY} --ssl-certfile=${CRT}"
 fi
