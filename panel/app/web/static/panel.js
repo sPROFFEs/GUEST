@@ -108,4 +108,29 @@
     document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll("svg[data-sparkline]").forEach(drawSparkline);
     });
+
+    /* ----------- Scroll restoration across form posts -----------
+     * The panel uses POST → 303 → GET redirects everywhere. Without help,
+     * every toggle / save / scan resets the scroll to the top. We stash the
+     * current scrollY before any POST submit and restore it once the next
+     * page loads at the same path.
+     */
+    const SCROLL_KEY = "panel_scroll:" + location.pathname;
+    document.addEventListener("submit", (e) => {
+        const f = e.target;
+        if (f && f.method && f.method.toLowerCase() === "post") {
+            try {
+                sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
+            } catch (_) { /* private mode etc — ignore */ }
+        }
+    }, true);
+    document.addEventListener("DOMContentLoaded", () => {
+        try {
+            const y = sessionStorage.getItem(SCROLL_KEY);
+            if (y !== null) {
+                window.scrollTo({ top: parseInt(y, 10), behavior: "instant" });
+                sessionStorage.removeItem(SCROLL_KEY);
+            }
+        } catch (_) { /* ignore */ }
+    });
 })();

@@ -24,6 +24,7 @@ PKGS=(
     ca-certificates
     tcpdump
     rsync
+    dnsmasq-utils
 )
 
 export DEBIAN_FRONTEND=noninteractive

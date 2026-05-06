@@ -1,6 +1,9 @@
 """LAN-internal host listing + per-host toggles + static-lease editing."""
 from __future__ import annotations
 
+import logging
+import subprocess
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
@@ -8,6 +11,23 @@ from app import db as dbmod
 from app.auth import require_user
 
 router = APIRouter()
+log = logging.getLogger("gateway.hosts")
+
+
+def _release_lease(lan_iface: str, ip: str, mac: str) -> None:
+    """Tell dnsmasq to forget the lease for this host. Best-effort — if it
+    fails (no active lease, or dhcp_release missing) we don't surface an
+    error because the goal is just to keep the lease file from re-spawning
+    the host on the next scan."""
+    if not (lan_iface and ip and mac):
+        return
+    try:
+        subprocess.run(
+            ["sudo", "/usr/bin/dhcp_release", lan_iface, ip, mac],
+            check=False, capture_output=True, timeout=3,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+        log.info("dhcp_release skipped: %s", e)
 
 
 @router.get("/api/hosts")
@@ -83,8 +103,53 @@ def set_ip(mac: str, ip: str = Form(...), request: Request = None, user: str = D
 @router.post("/hosts/{mac}/delete")
 def delete(mac: str, request: Request, user: str = Depends(require_user)):
     conn = request.app.state.db
+    cfg = request.app.state.cfg
+    mac = mac.lower()
+
+    # Look up the IP we know about so we can release its lease, otherwise the
+    # next scanner pass would just re-import the host from dnsmasq.leases.
+    row = conn.execute("SELECT ip FROM internal_hosts WHERE mac=?", (mac,)).fetchone()
+    ip = row["ip"] if row and row["ip"] else None
+
     with dbmod.transaction(conn):
-        conn.execute("DELETE FROM internal_hosts WHERE mac=?", (mac.lower(),))
+        conn.execute("DELETE FROM internal_hosts WHERE mac=?", (mac,))
         dbmod.mark_dirty(conn)
-        dbmod.audit(conn, user, "host.delete", target=mac)
+        dbmod.audit(conn, user, "host.delete", target=mac, detail=ip or "")
+
+    _release_lease(cfg.lan_iface, ip, mac)
+    return RedirectResponse(url="/hosts", status_code=303)
+
+
+@router.post("/hosts/reset")
+def reset_lan_state(request: Request, user: str = Depends(require_user)):
+    """Hard wipe of LAN-side state: drops every internal_hosts row, truncates
+    the dnsmasq lease file and our static-reservations file, and bounces
+    dnsmasq. Intended for "I just cloned this VM and want a clean slate".
+
+    Does NOT touch peer ACLs, peer metadata, lan_egress rules, or audit log."""
+    conn = request.app.state.db
+
+    with dbmod.transaction(conn):
+        n = conn.execute("SELECT COUNT(*) AS c FROM internal_hosts").fetchone()["c"]
+        conn.execute("DELETE FROM internal_hosts")
+        dbmod.mark_dirty(conn)
+        dbmod.audit(
+            conn, user, "host.reset",
+            detail=f"wiped {n} hosts, leases, and reservations",
+        )
+
+    # Stop dnsmasq, truncate state files, restart. If the helper is missing
+    # (older install before this feature), fall back to a manual best-effort.
+    try:
+        subprocess.run(
+            ["sudo", "/usr/local/sbin/gateway-lan-reset"],
+            check=True, capture_output=True, timeout=10,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+        log.warning("gateway-lan-reset wrapper failed: %s", e)
+        request.app.state.last_error = (
+            "Reset wiped the database, but could not bounce dnsmasq cleanly. "
+            "Run `sudo systemctl restart dnsmasq` from the VM."
+        )
+
     return RedirectResponse(url="/hosts", status_code=303)

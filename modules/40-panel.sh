@@ -158,6 +158,27 @@ EOF
 # --- sudoers drop-in: panel can run a small whitelist of root commands ---
 # This is the privilege boundary. Anything the applier needs to run as root
 # goes here, nothing else.
+# --- LAN-state wipe helper -----------------------------------------------
+# A privileged helper script so the panel can hard-reset everything DHCP-side
+# (leases + static reservations) without giving the gateway user blanket
+# write access to dnsmasq paths via sudoers wildcards.
+cat > /usr/local/sbin/gateway-lan-reset <<'WIPE'
+#!/usr/bin/env bash
+# Wipes dnsmasq's lease file and our gateway-managed static-host reservations,
+# bouncing dnsmasq so the running state matches. Hardcoded paths only.
+set -e
+LEASES=/var/lib/misc/dnsmasq.leases
+HOSTS=/etc/dnsmasq.d/gateway-hosts.conf
+
+systemctl stop dnsmasq 2>/dev/null || true
+: > "$LEASES"   2>/dev/null || true
+: > "$HOSTS"    2>/dev/null || true
+chown dnsmasq:nogroup "$LEASES" 2>/dev/null || true
+chmod 0644 "$LEASES" "$HOSTS"   2>/dev/null || true
+systemctl start dnsmasq
+WIPE
+chmod 0755 /usr/local/sbin/gateway-lan-reset
+
 cat > /etc/sudoers.d/gateway-panel <<'EOF'
 # Validation (read-only) — staged renders before swap, plus the full ruleset.
 gateway ALL=(root) NOPASSWD: /usr/sbin/nft -c -f /var/lib/gateway/render/*
@@ -184,6 +205,10 @@ gateway ALL=(root) NOPASSWD: /bin/systemctl stop dnsmasq
 # Config swaps from staged renders.
 gateway ALL=(root) NOPASSWD: /usr/bin/install -m 0644 /var/lib/gateway/render/* /etc/nftables.d/50-panel.nft
 gateway ALL=(root) NOPASSWD: /usr/bin/install -m 0644 /var/lib/gateway/render/* /etc/dnsmasq.d/gateway-hosts.conf
+# DHCP lease management: release individual leases (when deleting a host) and
+# the full wipe used by the "Reset LAN state" action.
+gateway ALL=(root) NOPASSWD: /usr/bin/dhcp_release *
+gateway ALL=(root) NOPASSWD: /usr/local/sbin/gateway-lan-reset
 EOF
 chmod 440 /etc/sudoers.d/gateway-panel
 visudo -cf /etc/sudoers.d/gateway-panel

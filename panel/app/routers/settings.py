@@ -9,6 +9,7 @@ from fastapi.responses import RedirectResponse
 from app import db as dbmod
 from app.auth import require_user
 from app.services import applier
+from app.util import safe_redirect_back
 
 router = APIRouter()
 
@@ -24,8 +25,9 @@ _SERVICE_FOR_TOGGLE = {
 
 @router.post("/settings/toggle")
 def toggle(key: str = Form(...), request: Request = None, user: str = Depends(require_user)):
+    target = safe_redirect_back(request, fallback="/settings")
     if key not in _SERVICE_FOR_TOGGLE:
-        return RedirectResponse(url="/settings", status_code=303)
+        return RedirectResponse(url=target, status_code=303)
     conn = request.app.state.db
     cur = dbmod.get_setting(conn, key, "false")
     new = "false" if cur == "true" else "true"
@@ -39,7 +41,7 @@ def toggle(key: str = Form(...), request: Request = None, user: str = Depends(re
     action = "start" if new == "true" else "stop"
     subprocess.run(["sudo", "/bin/systemctl", action, svc], check=False)
 
-    return RedirectResponse(url="/settings", status_code=303)
+    return RedirectResponse(url=target, status_code=303)
 
 
 @router.post("/apply")
@@ -48,9 +50,10 @@ def apply(request: Request, user: str = Depends(require_user)):
     cfg = request.app.state.cfg
     try:
         applier.apply(conn, cfg, actor=user)
+        request.app.state.last_error = None
     except applier.ApplyError as e:
         request.app.state.last_error = str(e)
-    return RedirectResponse(url="/", status_code=303)
+    return RedirectResponse(url=safe_redirect_back(request, fallback="/"), status_code=303)
 
 
 @router.get("/api/status")
