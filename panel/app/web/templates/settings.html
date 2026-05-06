@@ -12,7 +12,7 @@
 <article class="card">
     <header>Service toggles</header>
     <div class="body">
-        <p class="muted" style="margin:0 0 1rem">
+        <p class="muted note roomy">
             These switches start or stop the underlying daemon. They do <strong>not</strong>
             route traffic on their own — to send a specific peer or host through Tor,
             use the per-row toggle on
@@ -23,18 +23,16 @@
             'tor_enabled':  ('Tor service',        'Daemon that carries marked traffic. Per-peer/host opt-in elsewhere.'),
             'dhcp_enabled': ('DHCP / DNS service', 'dnsmasq for the internal LAN.'),
         } %}
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:.75rem;">
+        <div class="toggle-grid">
             {% for key, value in settings.items() %}
             {% set lbl = labels.get(key, (key, '')) %}
-            <form method="post" action="/settings/toggle" class="toggle-form"
-                  style="justify-content:space-between;padding:.7rem .85rem;background:var(--pico-card-sectioning-background-color);border-radius:6px;align-items:flex-start;">
+            <form method="post" action="/settings/toggle" class="toggle-form toggle-card">
                 <input type="hidden" name="key" value="{{ key }}">
-                <div style="display:flex;flex-direction:column;gap:.15rem">
-                    <span style="font-weight:500">{{ lbl[0] }}</span>
-                    <small class="muted" style="font-size:.78rem">{{ lbl[1] }}</small>
+                <div>
+                    <span>{{ lbl[0] }}</span>
+                    <small class="muted">{{ lbl[1] }}</small>
                 </div>
-                <button type="submit" class="switch {{ 'on' if value }}" aria-label="toggle {{ key }}"
-                        style="margin-top:.2rem"></button>
+                <button type="submit" class="switch {{ 'on' if value }}" aria-label="toggle {{ key }}"></button>
             </form>
             {% endfor %}
         </div>

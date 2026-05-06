@@ -7,16 +7,17 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body style="background:var(--pico-background-color);">
-<main style="max-width:24rem;margin:6rem auto;padding:0 1rem;">
-    <article class="card">
-        <header style="display:flex;flex-direction:column;align-items:flex-start;background:transparent;border-bottom:1px solid var(--pico-card-border-color);">
-            <strong style="font-size:1.05rem">{{ gateway_name }}</strong>
-            <span class="muted" style="font-size:.85rem">Sign in to manage this gateway.</span>
+<body class="login-page">
+<main class="login-shell">
+    <article class="card login-card">
+        <header>
+            <span class="login-mark">{{ gateway_name[:1] | upper }}</span>
+            <strong>{{ gateway_name }}</strong>
+            <span class="muted">Sign in to manage this gateway.</span>
         </header>
         <div class="body">
             {% if error %}
-            <div class="banner banner-error" style="margin-bottom:1rem">
+            <div class="banner banner-error login-error">
                 <span>{{ error }}</span>
             </div>
             {% endif %}
@@ -27,7 +28,7 @@
                 <label>Password
                     <input type="password" name="password" autocomplete="current-password" required>
                 </label>
-                <button type="submit" style="width:100%;margin-top:.5rem">Sign in</button>
+                <button type="submit" class="btn-full">Sign in</button>
             </form>
         </div>
     </article>
