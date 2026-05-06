@@ -4,14 +4,58 @@
 
 <div class="page-header">
     <div>
-        <h1>Overview</h1>
-        <p class="subtitle">Network identity, live module state, traffic.</p>
+        <h1>Welcome back, {{ user }}</h1>
+        <p class="subtitle">Live state of <code>{{ gateway_name }}</code> at a glance.</p>
     </div>
 </div>
 
+<!-- ===== stat cards ===== -->
+<div class="stats-grid">
+    <div class="stat">
+        <div class="stat-icon cyan">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="stat-value">{{ stats.peers_total }}</div>
+        <div class="stat-label">WG peers</div>
+        <div class="stat-delta {{ 'up' if stats.peers_online > 0 else '' }}">
+            {{ stats.peers_online }} online · {{ stats.peers_total - stats.peers_online }} idle
+        </div>
+    </div>
+
+    <div class="stat">
+        <div class="stat-icon orange">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="8" rx="2"/><rect x="2" y="13" width="20" height="8" rx="2"/><line x1="6" y1="7" x2="6.01" y2="7"/><line x1="6" y1="17" x2="6.01" y2="17"/></svg>
+        </div>
+        <div class="stat-value">{{ stats.hosts_total }}</div>
+        <div class="stat-label">Internal hosts</div>
+        <div class="stat-delta">{{ stats.hosts_reserved }} reserved / {{ stats.hosts_total - stats.hosts_reserved }} dynamic</div>
+    </div>
+
+    <div class="stat">
+        <div class="stat-icon green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+        </div>
+        <div class="stat-value">{{ stats.acl_rules }}</div>
+        <div class="stat-label">Active peer ACLs</div>
+        <div class="stat-delta">{{ stats.egress_rules }} LAN egress allows</div>
+    </div>
+
+    <div class="stat">
+        <div class="stat-icon {{ 'purple' if pending_count else 'blue' }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="stat-value">{{ pending_count or 0 }}</div>
+        <div class="stat-label">Pending changes</div>
+        <div class="stat-delta {{ 'down' if pending_count else 'up' }}">
+            {% if pending_count %}awaiting Apply{% else %}live ruleset is up to date{% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ===== row 1 ===== -->
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem;">
     <article class="card">
-        <header>Network</header>
+        <header>Network identity</header>
         <div class="body">
             <dl class="kv">
                 <dt>WAN iface</dt>     <dd><code>{{ wan_iface }}</code></dd>
@@ -23,8 +67,8 @@
     </article>
 
     <article class="card">
-        <header>Services</header>
-        <div class="body">
+        <header>Service status</header>
+        <div class="body" style="padding:0">
             <table class="data">
                 <tbody>
                 {% for svc, state in services.items() %}
@@ -49,8 +93,9 @@
     </article>
 </div>
 
+<!-- ===== traffic ===== -->
 <article class="card">
-    <header>Traffic</header>
+    <header>Interface traffic</header>
     <div class="body">
         {% if not iface_cards %}
         <div class="empty">
@@ -71,7 +116,7 @@
             </div>
             {% if ic.has_history %}
             <svg class="spark" viewBox="0 0 240 36" preserveAspectRatio="none"
-                 data-sparkline data-points="{{ ic.rx_series }}" data-color="#5b9cff"></svg>
+                 data-sparkline data-points="{{ ic.rx_series }}" data-color="#6aa2ff"></svg>
             {% else %}
             <div class="muted" style="grid-column:1/3;font-size:.78rem">
                 No history (install monitoring module for charts).
@@ -83,13 +128,14 @@
     </div>
 </article>
 
+<!-- ===== tor health (conditional) ===== -->
 {% if tor_checks %}
 <article class="card">
     <header>Tor pipeline health</header>
     <div class="body">
         <p class="muted" style="margin:0 0 .75rem;font-size:.85rem">
             For traffic from a peer or host to actually go through Tor, every check
-            below has to be green. Click <strong>Apply</strong> after toggling
+            below must be green. Click <strong>Apply</strong> after toggling
             <em>Tor</em> on a peer/host so its IP shows up in the nft set.
         </p>
         <table class="data">
@@ -115,10 +161,11 @@
 </article>
 {% endif %}
 
+<!-- ===== module toggles ===== -->
 <article class="card">
     <header>Module toggles</header>
     <div class="body">
-        <p class="muted" style="margin:0 0 .75rem">
+        <p class="muted" style="margin:0 0 .75rem;font-size:.85rem">
             Service-level on/off. Firewall rule changes still need an explicit
             <strong>Apply</strong> from the topbar.
         </p>

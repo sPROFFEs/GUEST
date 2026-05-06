@@ -10,47 +10,108 @@
     <script src="/static/panel.js" defer></script>
 </head>
 <body>
+{# ----- icon set used in the sidebar (inline SVG paths) -----------------#}
+{% macro icon(name) -%}
+<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+{%- if name == 'home' -%}<path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>
+{%- elif name == 'users' -%}<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+{%- elif name == 'server' -%}<rect x="2" y="3" width="20" height="8" rx="2"/><rect x="2" y="13" width="20" height="8" rx="2"/><line x1="6" y1="7" x2="6.01" y2="7"/><line x1="6" y1="17" x2="6.01" y2="17"/>
+{%- elif name == 'shield' -%}<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+{%- elif name == 'sliders' -%}<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+{%- elif name == 'user' -%}<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+{%- elif name == 'list' -%}<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+{%- elif name == 'logout' -%}<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+{%- elif name == 'external' -%}<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+{%- elif name == 'check' -%}<polyline points="20 6 9 17 4 12"/>
+{%- endif -%}
+</svg>
+{%- endmacro %}
+
+{# ----- breadcrumb mapping ------------------------------------------------#}
+{% set crumbs = {
+    '/':           ('Overview', 'Dashboard'),
+    '/peers':      ('Network',  'Peers'),
+    '/hosts':      ('Network',  'Internal hosts'),
+    '/lan-egress': ('Network',  'LAN egress'),
+    '/users':      ('Admin',    'Users'),
+    '/settings':   ('Admin',    'Settings'),
+    '/audit':      ('Admin',    'Audit log'),
+} %}
+{% set path = request.url.path %}
+{% set crumb = crumbs.get(path) %}
+{% if not crumb %}
+    {% if path.startswith('/peers/') %}
+        {% set crumb = ('Network', 'Peer ACL') %}
+    {% else %}
+        {% set crumb = ('', '') %}
+    {% endif %}
+{% endif %}
+
 <div class="app">
     <aside class="sidebar">
-        <div class="brand">{{ gateway_name }}</div>
+        <div class="brand">
+            <div class="logo">{{ gateway_name[:1] | upper }}</div>
+            <div class="name">{{ gateway_name }}</div>
+        </div>
         <nav>
-            {% set active = request.url.path %}
-            <a href="/"           class="{{ 'active' if active == '/' }}">Overview</a>
-            <a href="/peers"      class="{{ 'active' if active.startswith('/peers') }}">Peers</a>
-            <a href="/hosts"      class="{{ 'active' if active.startswith('/hosts') }}">Hosts</a>
-            <a href="/lan-egress" class="{{ 'active' if active.startswith('/lan-egress') }}">LAN egress</a>
-            <a href="/users"      class="{{ 'active' if active.startswith('/users') }}">Users</a>
-            <a href="/settings"   class="{{ 'active' if active.startswith('/settings') }}">Settings</a>
-            <a href="/audit"      class="{{ 'active' if active.startswith('/audit') }}">Audit</a>
+            <div class="section-label">Overview</div>
+            <a href="/" class="{{ 'active' if path == '/' }}">{{ icon('home') }}<span>Dashboard</span></a>
+
+            <div class="section-label">Network</div>
+            <a href="/peers"      class="{{ 'active' if path.startswith('/peers') }}">{{ icon('users') }}<span>Peers</span></a>
+            <a href="/hosts"      class="{{ 'active' if path.startswith('/hosts') }}">{{ icon('server') }}<span>Internal hosts</span></a>
+            <a href="/lan-egress" class="{{ 'active' if path.startswith('/lan-egress') }}">{{ icon('shield') }}<span>LAN egress</span></a>
+
+            <div class="section-label">Admin</div>
+            <a href="/users"    class="{{ 'active' if path.startswith('/users') }}">{{ icon('user') }}<span>Users</span></a>
+            <a href="/settings" class="{{ 'active' if path.startswith('/settings') }}">{{ icon('sliders') }}<span>Settings</span></a>
+            <a href="/audit"    class="{{ 'active' if path.startswith('/audit') }}">{{ icon('list') }}<span>Audit log</span></a>
         </nav>
-        <div class="spacer"></div>
-        <div class="who">Logged in as <strong>{{ user|default("?") }}</strong></div>
-        <form method="post" action="/logout">
-            <button class="secondary outline logout" type="submit">Sign out</button>
-        </form>
+
+        <div class="who">
+            <div class="avatar">{{ user[:1] | upper if user else '?' }}</div>
+            <div class="who-text">
+                <div class="who-name">{{ user|default("?") }}</div>
+                <div class="who-role">admin</div>
+            </div>
+            <form method="post" action="/logout">
+                <button type="submit" class="logout-btn" title="Sign out">{{ icon('logout') }}</button>
+            </form>
+        </div>
     </aside>
 
-    <main class="content">
-        <header class="topbar">
-            <div>
-                {% if last_error %}
-                <span class="topbar-error" title="{{ last_error }}">last apply failed — see Audit</span>
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="breadcrumbs">
+                {% if crumb[0] %}
+                    <span>{{ crumb[0] }}</span>
+                    <span class="sep">/</span>
                 {% endif %}
+                <span class="current">{{ crumb[1] or 'Panel' }}</span>
             </div>
-            <div class="topbar-actions">
-                {% if pending_count and pending_count > 0 %}
-                    <span class="topbar-pending">{{ pending_count }} pending change{{ 's' if pending_count != 1 }}</span>
-                    <form method="post" action="/apply">
-                        <button type="submit" class="topbar-apply">Apply now</button>
-                    </form>
-                {% else %}
-                    <span class="topbar-clean">All changes applied</span>
-                {% endif %}
-            </div>
-        </header>
+        </div>
+        <div class="topbar-right">
+            {% if last_error %}
+            <span class="pill err" title="{{ last_error }}">last apply failed</span>
+            {% endif %}
+            {% if pending_count and pending_count > 0 %}
+                <span class="pill warn">{{ pending_count }} pending</span>
+                <form method="post" action="/apply">
+                    <button type="submit" class="topbar-btn">{{ icon('check') }} Apply</button>
+                </form>
+            {% else %}
+                <span class="pill">All applied</span>
+            {% endif %}
+            <a href="//{{ request.url.hostname }}:10086" target="_blank" rel="noopener"
+               class="topbar-link" title="Open WGDashboard in a new tab">
+                WGDashboard {{ icon('external') }}
+            </a>
+        </div>
+    </header>
 
+    <main class="content">
         {% if tor_warning %}
-        <div class="banner banner-warn" style="margin-bottom:1rem">
+        <div class="banner banner-warn">
             <span><strong>Tor mismatch.</strong> {{ tor_warning }}</span>
         </div>
         {% endif %}

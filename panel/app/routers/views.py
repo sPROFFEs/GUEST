@@ -121,6 +121,34 @@ def dashboard(request: Request, user: str = Depends(require_user)):
     show_tor_health = settings.get("tor_enabled") or _tor_inconsistency(conn) is not None
     tor_checks = diagnostics.tor_health(cfg.tor_trans_port) if show_tor_health else []
 
+    # ---- stat cards ----
+    from app.services.wg_sync import list_peers as _list_wg_peers
+    wg_peers = _list_wg_peers(cfg.wg_show_cmd)
+    now_ts = int(datetime.now(timezone.utc).timestamp())
+    peers_online = sum(
+        1 for p in wg_peers
+        if p.last_handshake and (now_ts - p.last_handshake) < 180
+    )
+    hosts_total = conn.execute("SELECT COUNT(*) AS c FROM internal_hosts").fetchone()["c"]
+    hosts_reserved = conn.execute(
+        "SELECT COUNT(*) AS c FROM internal_hosts WHERE static=1"
+    ).fetchone()["c"]
+    acl_rules_count = conn.execute(
+        "SELECT COUNT(*) AS c FROM acl_rules WHERE enabled=1"
+    ).fetchone()["c"]
+    egress_rules_count = conn.execute(
+        "SELECT COUNT(*) AS c FROM lan_egress_rules WHERE enabled=1"
+    ).fetchone()["c"]
+
+    stats = {
+        "peers_total": len(wg_peers),
+        "peers_online": peers_online,
+        "hosts_total": hosts_total,
+        "hosts_reserved": hosts_reserved,
+        "acl_rules": acl_rules_count,
+        "egress_rules": egress_rules_count,
+    }
+
     return _templates.TemplateResponse("dashboard.html", {
         "request": request, "user": user,
         "settings": settings, "services": services,
@@ -128,6 +156,7 @@ def dashboard(request: Request, user: str = Depends(require_user)):
         "lan_cidr": cfg.lan_cidr, "wg_peer_cidr": cfg.wg_peer_cidr,
         "iface_cards": iface_cards,
         "tor_checks": tor_checks,
+        "stats": stats,
         **_flags(request),
     })
 
