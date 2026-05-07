@@ -26,6 +26,13 @@ endpoint    = "vpn.example.com:51820"
 # dnsmasq dhcp-range syntax: start,end,lease-time
 range = "192.168.100.100,192.168.100.200,12h"
 
+# Advertise this MTU to LAN clients via DHCP option 26. Set this when the
+# gateway's upstream is a tunnel/VPN with MTU < 1500 — clients will pick the
+# right value at lease time and avoid black-holed UDP/QUIC traffic.
+# Common values: 1400 (WireGuard/most VPNs), 1380 (extra headroom),
+# 1492 (PPPoE). Comment out or leave 1500 for direct internet uplinks.
+#advertise_mtu = 1400
+
 [panel]
 # Bind addresses for the custom panel and WGDashboard.
 #   - Default ("10.66.66.1"): reachable only via the WG tunnel.

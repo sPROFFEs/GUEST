@@ -27,6 +27,15 @@ fi
 if [[ "${MODULES_DHCP:-true}" == "true" ]]; then
     : "${DHCP_RANGE:?missing [dhcp].range in toml}"
 
+    # Optional MTU advertisement (DHCP option 26). When upstream is a VPN/
+    # tunnel < 1500, broadcasting the right MTU here saves every LAN client
+    # from manual netplan overrides and the silent UDP/QUIC black-hole that
+    # results from PMTU mismatches across NATs.
+    MTU_LINE=""
+    if [[ -n "${DHCP_ADVERTISE_MTU:-}" ]]; then
+        MTU_LINE="dhcp-option=option:mtu,${DHCP_ADVERTISE_MTU}"
+    fi
+
     cat > /etc/dnsmasq.d/gateway.conf <<EOF
 # Managed by gateway installer — base config.
 # Static leases per-host are appended by the panel to gateway-hosts.conf.
@@ -37,6 +46,7 @@ bogus-priv
 dhcp-range=${DHCP_RANGE}
 dhcp-authoritative
 log-dhcp
+${MTU_LINE}
 # Upstream DNS — the gateway resolves on behalf of the LAN.
 server=1.1.1.1
 server=9.9.9.9
