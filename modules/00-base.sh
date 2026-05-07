@@ -39,6 +39,15 @@ net.ipv4.ip_forward = 1
 # when reply path differs from receive interface.
 net.ipv4.conf.all.rp_filter = 2
 net.ipv4.conf.default.rp_filter = 2
+
+# Conntrack timeouts. The kernel default for UDP (30s) kills long-lived UDP
+# flows like QUIC and cloudflared tunnels: a brief idle window expires the
+# NAT mapping, the next packet gets a fresh source port, the remote sees a
+# "different" connection and disconnects. The TCP established default
+# (5 days) is fine; we set it explicitly for clarity.
+net.netfilter.nf_conntrack_udp_timeout = 120
+net.netfilter.nf_conntrack_udp_timeout_stream = 600
+net.netfilter.nf_conntrack_tcp_timeout_established = 86400
 EOF
 # Apply ONLY our file. `sysctl --system` walks every sysctl.d/ file and barks
 # on keys it can't touch in containers/restricted environments — those aren't
