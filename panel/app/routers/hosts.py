@@ -1,7 +1,9 @@
 """LAN-internal host listing + per-host toggles + static-lease editing."""
 from __future__ import annotations
 
+import ipaddress
 import logging
+import re
 import subprocess
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -12,6 +14,36 @@ from app.auth import require_user
 
 router = APIRouter()
 log = logging.getLogger("gateway.hosts")
+
+_MAC_RE = re.compile(r"^[0-9a-f]{2}(:[0-9a-f]{2}){5}$")
+_HOSTNAME_RE = re.compile(
+    r"^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)(?:\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*$"
+)
+
+
+def _normalize_mac(value: str) -> str:
+    mac = (value or "").strip().lower()
+    if not _MAC_RE.match(mac):
+        raise HTTPException(400, "bad mac")
+    return mac
+
+
+def _normalize_ipv4(value: str) -> str:
+    try:
+        return str(ipaddress.IPv4Address((value or "").strip()))
+    except ValueError:
+        raise HTTPException(400, "bad ip")
+
+
+def _normalize_hostname(value: str) -> str:
+    hostname = (value or "").strip()
+    if not hostname:
+        return ""
+    if "," in hostname or "\n" in hostname or "\r" in hostname:
+        raise HTTPException(400, "bad hostname")
+    if not _HOSTNAME_RE.match(hostname):
+        raise HTTPException(400, "bad hostname")
+    return hostname
 
 
 def _release_lease(lan_iface: str, ip: str, mac: str) -> None:
@@ -58,7 +90,9 @@ def create(
     request: Request = None,
     user: str = Depends(require_user),
 ):
-    mac = mac.lower()
+    mac = _normalize_mac(mac)
+    ip = _normalize_ipv4(ip)
+    hostname = _normalize_hostname(hostname)
     conn = request.app.state.db
     with dbmod.transaction(conn):
         conn.execute(
@@ -76,11 +110,12 @@ def create(
 def toggle(mac: str, field: str = Form(...), request: Request = None, user: str = Depends(require_user)):
     if field not in {"blocked", "tor_routed", "static"}:
         raise HTTPException(400, "bad field")
+    mac = _normalize_mac(mac)
     conn = request.app.state.db
     with dbmod.transaction(conn):
         conn.execute(
             f"UPDATE internal_hosts SET {field} = 1 - {field} WHERE mac=?",
-            (mac.lower(),),
+            (mac,),
         )
         dbmod.mark_dirty(conn)
         dbmod.audit(conn, user, f"host.toggle.{field}", target=mac)
@@ -89,11 +124,13 @@ def toggle(mac: str, field: str = Form(...), request: Request = None, user: str 
 
 @router.post("/hosts/{mac}/ip")
 def set_ip(mac: str, ip: str = Form(...), request: Request = None, user: str = Depends(require_user)):
+    mac = _normalize_mac(mac)
+    ip = _normalize_ipv4(ip)
     conn = request.app.state.db
     with dbmod.transaction(conn):
         conn.execute(
             "UPDATE internal_hosts SET ip=?, static=1 WHERE mac=?",
-            (ip, mac.lower()),
+            (ip, mac),
         )
         dbmod.mark_dirty(conn)
         dbmod.audit(conn, user, "host.ip", target=mac, detail=ip)
@@ -104,7 +141,7 @@ def set_ip(mac: str, ip: str = Form(...), request: Request = None, user: str = D
 def delete(mac: str, request: Request, user: str = Depends(require_user)):
     conn = request.app.state.db
     cfg = request.app.state.cfg
-    mac = mac.lower()
+    mac = _normalize_mac(mac)
 
     # Look up the IP we know about so we can release its lease, otherwise the
     # next scanner pass would just re-import the host from dnsmasq.leases.

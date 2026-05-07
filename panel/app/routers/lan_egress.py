@@ -11,6 +11,19 @@ from app.util import normalize_cidr
 router = APIRouter()
 
 
+def _parse_port(value: str) -> int | None:
+    value = (value or "").strip()
+    if not value:
+        return None
+    try:
+        port = int(value)
+    except ValueError:
+        raise HTTPException(400, "bad port")
+    if not (1 <= port <= 65535):
+        raise HTTPException(400, "bad port")
+    return port
+
+
 # ----- restricted subnets -----
 
 @router.post("/lan-egress/subnets")
@@ -70,9 +83,7 @@ def add_rule(
     if proto not in {"tcp", "udp", "any"}:
         raise HTTPException(400, "bad proto")
     dst_cidr = normalize_cidr(dst_cidr)
-    dport_val = int(dport) if dport.strip() else None
-    if dport_val is not None and not (1 <= dport_val <= 65535):
-        raise HTTPException(400, "bad port")
+    dport_val = _parse_port(dport)
 
     conn = request.app.state.db
     with dbmod.transaction(conn):

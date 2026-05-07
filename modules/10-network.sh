@@ -84,6 +84,10 @@ table inet gateway {
         # \`size set rt mtu\` adapts to the actual route MTU on every SYN.
         tcp flags syn tcp option maxseg size set rt mtu
 
+        # Hard block always wins. Put this before lan_egress so an allowlist
+        # exception cannot accidentally resurrect a blocked host.
+        iifname "${GATEWAY_LAN_IFACE}" ip saddr @blocked_hosts drop
+
         # First, give the panel-managed lan_egress chain a chance to apply
         # the "restricted private subnets" allowlist. It accepts allowlisted
         # destinations, drops restricted ones, and returns for everything else.
@@ -91,8 +95,7 @@ table inet gateway {
 
         # Catch-all: LAN hosts may reach WAN (i.e. the internet, given that
         # private subnets that need restricting were already drop'd above).
-        iifname "${GATEWAY_LAN_IFACE}" oifname "${GATEWAY_WAN_IFACE}" \
-            ip saddr != @blocked_hosts accept
+        iifname "${GATEWAY_LAN_IFACE}" oifname "${GATEWAY_WAN_IFACE}" accept
     }
 
     chain postrouting {

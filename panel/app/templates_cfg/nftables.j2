@@ -31,7 +31,12 @@ flush chain inet gateway panel_forward
 table inet gateway {
     chain panel_forward {
 {% for r in acls %}
+{% if r.dport and r.proto == 'any' %}
+        ip saddr {{ r.src_ip }} ip daddr {{ r.dst_cidr }} tcp dport {{ r.dport }} {{ r.action }}
+        ip saddr {{ r.src_ip }} ip daddr {{ r.dst_cidr }} udp dport {{ r.dport }} {{ r.action }}
+{% else %}
         ip saddr {{ r.src_ip }} ip daddr {{ r.dst_cidr }}{% if r.proto != 'any' %} {{ r.proto }}{% endif %}{% if r.dport %} dport {{ r.dport }}{% endif %} {{ r.action }}
+{% endif %}
 {% endfor %}
     }
 }
@@ -45,11 +50,15 @@ flush chain inet gateway lan_egress
 table inet gateway {
     chain lan_egress {
 {% for r in lan_egress_allow %}
+{% if r.dport and r.proto == 'any' %}
+        ip daddr {{ r.dst_cidr }} tcp dport {{ r.dport }} accept
+        ip daddr {{ r.dst_cidr }} udp dport {{ r.dport }} accept
+{% else %}
         ip daddr {{ r.dst_cidr }}{% if r.proto != 'any' %} {{ r.proto }}{% endif %}{% if r.dport %} dport {{ r.dport }}{% endif %} accept
+{% endif %}
 {% endfor %}
 {% for cidr in lan_restricted %}
         ip daddr {{ cidr }} drop
 {% endfor %}
     }
 }
-

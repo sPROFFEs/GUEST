@@ -135,7 +135,13 @@ table inet gateway {
     }
 
     chain forward {
-        iifname "wg0" oifname "${GATEWAY_LAN_IFACE}" ip saddr != @blocked_peers accept
+        # Hard block always wins; panel ACLs cannot re-allow blocked peers.
+        iifname "wg0" oifname "${GATEWAY_LAN_IFACE}" ip saddr @blocked_peers drop
+
+        # Panel ACLs must run before the broad WG-to-LAN accept below.
+        iifname "wg0" oifname "${GATEWAY_LAN_IFACE}" jump panel_forward
+
+        iifname "wg0" oifname "${GATEWAY_LAN_IFACE}" accept
     }
 }
 EOF

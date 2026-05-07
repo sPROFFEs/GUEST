@@ -64,10 +64,6 @@ cat > /etc/nftables.d/45-panel-chains.nft <<'EOF'
 # into 50-panel.nft on each Apply.
 table inet gateway {
     chain panel_forward { }
-
-    chain forward {
-        jump panel_forward
-    }
 }
 EOF
 

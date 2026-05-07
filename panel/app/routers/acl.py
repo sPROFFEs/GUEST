@@ -11,6 +11,19 @@ from app.util import normalize_cidr
 router = APIRouter()
 
 
+def _parse_port(value: str) -> int | None:
+    value = (value or "").strip()
+    if not value:
+        return None
+    try:
+        port = int(value)
+    except ValueError:
+        raise HTTPException(400, "bad port")
+    if not (1 <= port <= 65535):
+        raise HTTPException(400, "bad port")
+    return port
+
+
 @router.get("/api/peers/{pubkey}/acl")
 def api_list(pubkey: str, request: Request, user: str = Depends(require_user)):
     conn = request.app.state.db
@@ -35,7 +48,7 @@ def add(
     if action not in {"accept", "drop"}:
         raise HTTPException(400, "bad action")
     dst_cidr = normalize_cidr(dst_cidr)
-    dport_val = int(dport) if dport.strip() else None
+    dport_val = _parse_port(dport)
     conn = request.app.state.db
     with dbmod.transaction(conn):
         # Make sure the peer_meta row exists (FK-like; we don't enforce FK

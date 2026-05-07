@@ -117,6 +117,10 @@ table inet gateway {
         ct state invalid drop
     }
 
+    # Regular (non-base) chain populated by the panel applier. Jumped from
+    # WireGuard forward rules before the broad WG->LAN accept.
+    chain panel_forward { }
+
     chain prerouting_mangle {
         type filter hook prerouting priority mangle;
     }
