@@ -67,6 +67,13 @@ table inet gateway {
     }
 
     chain forward {
+        # MSS clamping. Crucial when WAN has a smaller MTU than 1500 — VPNs,
+        # PPPoE, GRE, etc. Without this, internal hosts advertise MSS=1460,
+        # the path silently drops oversize packets, and long-lived TCP flows
+        # (cloudflared HTTP/2, SSH sessions, large transfers) appear "degraded".
+        # \`size set rt mtu\` adapts to the actual route MTU on every SYN.
+        tcp flags syn tcp option maxseg size set rt mtu
+
         # First, give the panel-managed lan_egress chain a chance to apply
         # the "restricted private subnets" allowlist. It accepts allowlisted
         # destinations, drops restricted ones, and returns for everything else.
