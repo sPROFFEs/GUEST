@@ -12,30 +12,93 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="login-page">
+
+<!-- Animated cyberpunk background layers -->
+<div class="login-bg" aria-hidden="true">
+    <div class="login-bg-grid"></div>
+    <div class="login-bg-scan"></div>
+    <div class="login-bg-glow"></div>
+</div>
+
 <main class="login-shell">
-    <article class="card login-card">
-        <header>
-            <span class="login-mark">{{ gateway_name[:1] | upper }}</span>
-            <strong class="glitched" data-text="{{ gateway_name }}">{{ gateway_name }}</strong>
-            <span class="muted">// Access terminal — sign in to continue.</span>
-        </header>
-        <div class="body">
-            {% if error %}
-            <div class="banner banner-error login-error">
-                <span>{{ error }}</span>
-            </div>
-            {% endif %}
-            <form method="post" action="/login">
-                <label>Username
-                    <input type="text" name="username" autocomplete="username" required autofocus>
-                </label>
-                <label>Password
-                    <input type="password" name="password" autocomplete="current-password" required>
-                </label>
-                <button type="submit" class="btn-full">Sign in</button>
-            </form>
+
+    <!-- Outer terminal frame -->
+    <section class="terminal" role="dialog" aria-labelledby="t-title">
+
+        <!-- Corner brackets (decorative) -->
+        <span class="bracket tl" aria-hidden="true"></span>
+        <span class="bracket tr" aria-hidden="true"></span>
+        <span class="bracket bl" aria-hidden="true"></span>
+        <span class="bracket br" aria-hidden="true"></span>
+
+        <!-- Top status strip: secure link indicator + timestamp marker -->
+        <div class="terminal-status">
+            <span class="dot dot-ok"></span>
+            <span class="t-mono">SECURE_LINK · 0x{{ '%07X' % (range(1048576, 268435455) | random) }}</span>
+            <span class="spacer"></span>
+            <span class="t-mono muted">SYS::AUTH</span>
+            <span class="blink dot-cyan"></span>
         </div>
-    </article>
+
+        <!-- Header: glyph + title + subtitle -->
+        <header class="terminal-header">
+            <span class="t-mark">{{ gateway_name[:1] | upper }}</span>
+            <div class="t-title-wrap">
+                <h1 id="t-title" class="glitched" data-text="{{ gateway_name }}">{{ gateway_name }}</h1>
+                <div class="t-sub">// ACCESS TERMINAL <span class="t-caret">_</span></div>
+            </div>
+        </header>
+
+        <!-- Divider -->
+        <div class="t-divider" aria-hidden="true">
+            <span></span><span></span><span></span>
+        </div>
+
+        <!-- Error banner -->
+        {% if error %}
+        <div class="t-alert">
+            <span class="t-mono">ERR::</span>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <!-- The actual login form -->
+        <form method="post" action="/login" class="terminal-form" autocomplete="on">
+            <label class="t-field">
+                <span class="t-label"><span class="t-arrow">&gt;</span> USERNAME</span>
+                <input type="text" name="username" autocomplete="username"
+                       required autofocus spellcheck="false">
+            </label>
+
+            <label class="t-field">
+                <span class="t-label"><span class="t-arrow">&gt;</span> PASSWORD</span>
+                <input type="password" name="password"
+                       autocomplete="current-password" required>
+            </label>
+
+            <button type="submit" class="t-submit">
+                <span class="t-submit-text">SIGN IN</span>
+                <span class="t-submit-tag">[ENTER]</span>
+            </button>
+        </form>
+
+        <!-- Footer: node info + version tag -->
+        <footer class="terminal-foot">
+            <span class="t-mono">NODE / <span class="t-strong">{{ gateway_name }}</span></span>
+            <span class="spacer"></span>
+            <span class="t-mono muted">v1.0 · NIGHT CITY EDITION</span>
+        </footer>
+
+    </section>
+
+    <!-- Below-terminal hint line (boot-style) -->
+    <p class="boot-line">
+        <span class="dot dot-cyan"></span>
+        <span class="t-mono">awaiting credentials.</span>
+        <span class="caret">_</span>
+    </p>
+
 </main>
+
 </body>
 </html>
