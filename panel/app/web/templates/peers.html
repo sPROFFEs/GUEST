@@ -9,7 +9,7 @@
             Live state from <code>wg show wg0</code>. Labels, ACLs and toggles are managed here.
         </p>
     </div>
-    <a href="//{{ request.url.hostname }}:10086" target="_blank" rel="noopener" class="cta-link">Open WGDashboard ↗</a>
+    <a href="http://{{ request.url.hostname }}:10086" target="_blank" rel="noopener" class="cta-link">Open WGDashboard ↗</a>
 </div>
 
 {% if peer_flash %}
@@ -25,7 +25,7 @@
         <p>WireGuard peers are created in <strong>WGDashboard</strong>.
             Once a peer handshakes for the first time, it shows up here so you can label it,
             block it, route it through Tor, or define what it can reach.</p>
-        <a href="//{{ request.url.hostname }}:10086" target="_blank" rel="noopener" class="cta-link">
+        <a href="http://{{ request.url.hostname }}:10086" target="_blank" rel="noopener" class="cta-link">
             Open WGDashboard to create a peer ↗
         </a>
     </div>
@@ -64,8 +64,9 @@
                         <span class="badge badge-muted">offline</span>
                     {% endif %}
                 </td>
+                {% set pk_url = p.pubkey | replace('/', '%2F') %}
                 <td title="pubkey: {{ p.pubkey }}">
-                    <form method="post" action="/peers/{{ p.pubkey }}/label" class="inline-edit">
+                    <form method="post" action="/peers/{{ pk_url }}/label" class="inline-edit">
                         <input name="label" value="{{ p.label }}" placeholder="add label">
                         <button class="btn-sm" type="submit" title="Save label">✓</button>
                     </form>
@@ -77,18 +78,18 @@
                 </td>
                 <td class="cell-tight muted" style="font-size:.82rem">{{ p.rx | filesizeformat }} / {{ p.tx | filesizeformat }}</td>
                 <td>
-                    <form method="post" action="/peers/{{ p.pubkey }}/toggle" class="toggle-form">
+                    <form method="post" action="/peers/{{ pk_url }}/toggle" class="toggle-form">
                         <input type="hidden" name="field" value="blocked">
                         <button type="submit" class="switch danger {{ 'on' if p.blocked }}" aria-label="block peer"></button>
                     </form>
                 </td>
                 <td>
-                    <form method="post" action="/peers/{{ p.pubkey }}/toggle" class="toggle-form">
+                    <form method="post" action="/peers/{{ pk_url }}/toggle" class="toggle-form">
                         <input type="hidden" name="field" value="tor_routed">
                         <button type="submit" class="switch {{ 'on' if p.tor_routed }}" aria-label="route via tor"></button>
                     </form>
                 </td>
-                <td><a href="/peers/{{ p.pubkey }}/acl">ACLs →</a></td>
+                <td><a href="/peers/{{ pk_url }}/acl">ACLs →</a></td>
             </tr>
         {% endfor %}
         </tbody>

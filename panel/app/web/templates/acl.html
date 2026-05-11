@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}acl{% endblock %}
 {% block content %}
+{% set pk_url = pubkey | replace('/', '%2F') %}
 
 <div class="page-header">
     <div>
@@ -13,7 +14,7 @@
 <article class="card">
     <header>Add ACL rule</header>
     <div class="body">
-        <form method="post" action="/peers/{{ pubkey }}/acl">
+        <form method="post" action="/peers/{{ pk_url }}/acl">
             <div class="form-grid">
                 <label>Destination
                     <input name="dst_cidr" placeholder="192.168.100.211 or 192.168.100.0/24"
