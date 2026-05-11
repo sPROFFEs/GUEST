@@ -1928,3 +1928,812 @@ code, .mono { transition: none; }
 .empty h3 { font-weight: 600; }
 .empty p  { max-width: 30rem; margin-left: auto; margin-right: auto; }
 
+/* =========================================================================
+   CYBERPUNK 2077 REMASTER
+   Inspired by alddesign/cyberpunk-css and gwannon/Cyberpunk-2077-theme-css.
+   Night City palette, neon glow, scanlines, glitch FX, angled clip-paths.
+   Appended last so it wins the cascade without deleting prior rules.
+   ========================================================================= */
+
+/* Google fonts — Rajdhani for UI body, Share Tech Mono for data/code,
+   Orbitron for the cybered-out title accents. Loaded via base.html link. */
+
+:root,
+[data-theme="dark"] {
+    /* Core neon palette */
+    --cy-bg:        #060a0d;
+    --cy-bg-2:      #0a1014;
+    --cy-bg-3:      #0e161b;
+    --cy-surface:   #121b21;
+    --cy-surface-2: #182229;
+    --cy-surface-3: #1f2c34;
+    --cy-line:      #1f2f36;
+    --cy-line-hot:  #00ffd266;
+
+    --cy-yellow:    #f9f002;
+    --cy-cyan:      #00ffd2;
+    --cy-cyan-2:    #46dffb;
+    --cy-magenta:   #ff2a6d;
+    --cy-red:       #ff003c;
+    --cy-orange:    #ff9800;
+    --cy-purple:    #c200fb;
+    --cy-neon:      #39ff14;
+
+    --cy-text:      #e8fbf6;
+    --cy-text-2:    #b6c7c5;
+    --cy-muted:     #6b7d80;
+    --cy-muted-2:   #485357;
+
+    --cy-glow-cyan:    0 0 6px rgba(0,255,210,.55), 0 0 18px rgba(0,255,210,.18);
+    --cy-glow-yellow:  0 0 6px rgba(249,240,2,.55), 0 0 18px rgba(249,240,2,.20);
+    --cy-glow-magenta: 0 0 6px rgba(255,42,109,.55), 0 0 18px rgba(255,42,109,.20);
+
+    /* Variable-driven clip-paths reused across surfaces. */
+    --cy-corner: 14px;
+    --cy-clip-card:   polygon(0 0, calc(100% - var(--cy-corner)) 0, 100% var(--cy-corner),
+                              100% 100%, var(--cy-corner) 100%, 0 calc(100% - var(--cy-corner)));
+    --cy-clip-btn:    polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%,
+                              10px 100%, 0 calc(100% - 10px));
+    --cy-clip-pill:   polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+
+    /* Pico overrides for the new bg. */
+    --pico-background-color:        var(--cy-bg);
+    --pico-color:                   var(--cy-text);
+}
+
+/* Body: dark slab + faint scanline overlay + soft cyan vignette.
+   Two stacked images on body::before so they don't repaint on every reflow. */
+html, body {
+    background: var(--cy-bg);
+    color: var(--cy-text);
+    font-family: "Rajdhani", "Aptos", "IBM Plex Sans", system-ui, sans-serif;
+    font-weight: 500;
+    letter-spacing: .015em;
+}
+body::before {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    background:
+        repeating-linear-gradient(
+            to bottom,
+            rgba(0,255,210,.025) 0 1px,
+            transparent 1px 3px
+        ),
+        radial-gradient(circle at 12% -10%, rgba(0,255,210,.10), transparent 32rem),
+        radial-gradient(circle at 88% 110%, rgba(255,42,109,.07), transparent 32rem);
+    mix-blend-mode: screen;
+}
+body::after {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 9998;
+    background: linear-gradient(180deg, rgba(0,0,0,.18) 0%, transparent 8%, transparent 92%, rgba(0,0,0,.35) 100%);
+}
+
+/* Selection + caret pop. */
+::selection { background: var(--cy-cyan); color: #001714; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--cy-bg-2); }
+::-webkit-scrollbar-thumb { background: var(--cy-surface-3); border: 2px solid var(--cy-bg-2); }
+::-webkit-scrollbar-thumb:hover { background: var(--cy-cyan); }
+
+/* Code / mono — terminal feel. */
+code, .mono, table.data code, dl.kv code {
+    font-family: "Share Tech Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace !important;
+    background: rgba(0,255,210,.06);
+    color: var(--cy-cyan);
+    padding: .05rem .35rem;
+    border-radius: 0;
+    letter-spacing: .02em;
+}
+
+/* ---- App shell ---- */
+.app {
+    /* keep the existing grid; just lift the chrome onto the new bg */
+}
+.sidebar {
+    background:
+        linear-gradient(180deg, var(--cy-bg-2) 0%, var(--cy-bg) 100%);
+    border-right: 1px solid var(--cy-line);
+    box-shadow: 1px 0 0 rgba(0,255,210,.04);
+}
+.sidebar .brand {
+    border-bottom: 1px solid var(--cy-line);
+    background: linear-gradient(90deg, rgba(0,255,210,.06), transparent 70%);
+}
+.sidebar .brand .logo {
+    background:
+        linear-gradient(135deg, var(--cy-cyan) 0%, var(--cy-yellow) 100%);
+    color: #001714;
+    border: 0;
+    box-shadow: var(--cy-glow-cyan);
+    clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+    border-radius: 0;
+    font-weight: 800;
+    font-family: "Orbitron", "Rajdhani", sans-serif;
+}
+.sidebar .brand .name {
+    font-family: "Orbitron", "Rajdhani", sans-serif;
+    font-weight: 700;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    font-size: 1rem;
+    color: var(--cy-text);
+    text-shadow: 0 0 6px rgba(0,255,210,.30);
+}
+
+.sidebar .section-label {
+    color: var(--cy-muted);
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    font-size: .64rem;
+    font-weight: 700;
+    padding: 1rem .85rem .35rem;
+    border-bottom: 1px dashed transparent;
+}
+.sidebar nav a {
+    color: var(--cy-text-2);
+    border-radius: 0;
+    clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+    min-height: 36px;
+    font-weight: 500;
+    letter-spacing: .02em;
+    position: relative;
+}
+.sidebar nav a:hover {
+    background: rgba(0,255,210,.06);
+    color: var(--cy-cyan);
+    box-shadow: inset 2px 0 0 var(--cy-cyan);
+}
+.sidebar nav a:hover .icon { color: var(--cy-cyan); }
+.sidebar nav a.active {
+    background:
+        linear-gradient(90deg, rgba(0,255,210,.15), rgba(0,255,210,.02) 70%);
+    color: var(--cy-cyan);
+    box-shadow: inset 3px 0 0 var(--cy-cyan), 0 0 12px rgba(0,255,210,.10);
+    text-shadow: 0 0 8px rgba(0,255,210,.45);
+}
+.sidebar nav a.active .icon { color: var(--cy-cyan); }
+.sidebar nav a.active::after {
+    content: "";
+    position: absolute;
+    right: 8px; top: 50%;
+    width: 5px; height: 5px;
+    background: var(--cy-cyan);
+    box-shadow: var(--cy-glow-cyan);
+    transform: translateY(-50%) rotate(45deg);
+}
+
+.sidebar .who {
+    border-top: 1px solid var(--cy-line);
+    background: rgba(0,0,0,.25);
+}
+.sidebar .who .avatar {
+    background: linear-gradient(135deg, var(--cy-magenta) 0%, var(--cy-purple) 100%);
+    color: #fff;
+    box-shadow: var(--cy-glow-magenta);
+    border: 0;
+    border-radius: 0;
+    clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px));
+    font-family: "Orbitron", sans-serif;
+    font-weight: 700;
+}
+.sidebar .who .who-name { color: var(--cy-text); letter-spacing: .02em; }
+.sidebar .who .who-role {
+    color: var(--cy-cyan);
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    font-size: .65rem;
+    font-weight: 700;
+}
+.sidebar .who .logout-btn {
+    background: transparent;
+    border: 1px solid var(--cy-line);
+    color: var(--cy-muted);
+    border-radius: 0;
+}
+.sidebar .who .logout-btn:hover {
+    color: var(--cy-magenta);
+    border-color: var(--cy-magenta);
+    background: rgba(255,42,109,.10);
+    box-shadow: var(--cy-glow-magenta);
+}
+
+/* ---- Topbar ---- */
+.topbar {
+    background: linear-gradient(180deg, var(--cy-bg-2), var(--cy-bg));
+    border-bottom: 1px solid var(--cy-line);
+    position: relative;
+}
+.topbar::after {
+    /* glowing scan line under the topbar */
+    content: "";
+    position: absolute; left: 0; right: 0; bottom: -1px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cy-cyan), transparent);
+    opacity: .55;
+}
+.breadcrumbs {
+    color: var(--cy-muted);
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    font-size: .72rem;
+    font-weight: 600;
+}
+.breadcrumbs .current {
+    color: var(--cy-cyan);
+    text-shadow: 0 0 8px rgba(0,255,210,.40);
+}
+.breadcrumbs .sep { color: var(--cy-muted-2); }
+
+.topbar-right .pill {
+    background: transparent;
+    border: 1px solid var(--cy-line);
+    color: var(--cy-text-2);
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    font-size: .7rem;
+    font-weight: 700;
+    border-radius: 0;
+    clip-path: var(--cy-clip-pill);
+    padding: .35rem 1rem;
+    min-height: 30px;
+}
+.topbar-right .pill.warn {
+    color: #1a1308;
+    background: var(--cy-yellow);
+    border-color: var(--cy-yellow);
+    box-shadow: var(--cy-glow-yellow);
+    animation: cy-flicker 4s infinite linear;
+}
+.topbar-right .pill.warn::before { display: none; }
+.topbar-right .pill.err {
+    color: #fff;
+    background: var(--cy-magenta);
+    border-color: var(--cy-magenta);
+    box-shadow: var(--cy-glow-magenta);
+}
+
+/* Buttons — angled clip-path, cyber glow on hover. The base "button" rule
+   from earlier passes set white-on-light; we re-style here for the theme. */
+button,
+.cta-link,
+.topbar-right .topbar-btn,
+button.btn-sm {
+    background: var(--cy-cyan) !important;
+    border: 1px solid var(--cy-cyan) !important;
+    color: #001714 !important;
+    border-radius: 0 !important;
+    clip-path: var(--cy-clip-btn);
+    font-family: "Rajdhani", sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    transition: background .12s, box-shadow .15s, transform .08s;
+}
+button:hover,
+.cta-link:hover,
+.topbar-right .topbar-btn:hover {
+    background: var(--cy-yellow) !important;
+    border-color: var(--cy-yellow) !important;
+    color: #1a1308 !important;
+    box-shadow: var(--cy-glow-yellow);
+    transform: translateY(-1px);
+}
+button:active { transform: translateY(0); }
+
+button.secondary,
+button.outline,
+button[class*="secondary"] {
+    background: transparent !important;
+    border: 1px solid var(--cy-cyan) !important;
+    color: var(--cy-cyan) !important;
+    clip-path: var(--cy-clip-btn);
+}
+button.secondary:hover,
+button.outline:hover {
+    background: rgba(0,255,210,.10) !important;
+    color: var(--cy-cyan) !important;
+    border-color: var(--cy-cyan) !important;
+    box-shadow: var(--cy-glow-cyan);
+}
+button.btn-danger {
+    background: transparent !important;
+    border: 1px solid var(--cy-magenta) !important;
+    color: var(--cy-magenta) !important;
+}
+button.btn-danger:hover {
+    background: var(--cy-magenta) !important;
+    color: #fff !important;
+    box-shadow: var(--cy-glow-magenta);
+}
+
+/* Anchor styled as secondary button — keep the cyber clip-path. */
+a.secondary,
+a.cta-link.secondary {
+    background: transparent;
+    border: 1px solid var(--cy-cyan);
+    color: var(--cy-cyan);
+    clip-path: var(--cy-clip-btn);
+    border-radius: 0;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-weight: 700;
+}
+a.secondary:hover {
+    background: rgba(0,255,210,.10);
+    color: var(--cy-cyan);
+    border-color: var(--cy-cyan);
+    box-shadow: var(--cy-glow-cyan);
+}
+a.cta-link {
+    background: var(--cy-cyan);
+    color: #001714;
+    border-radius: 0;
+    clip-path: var(--cy-clip-btn);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-weight: 700;
+}
+a.cta-link:hover {
+    background: var(--cy-yellow);
+    color: #1a1308;
+    box-shadow: var(--cy-glow-yellow);
+}
+
+.topbar-right .topbar-link {
+    background: transparent;
+    border: 1px solid var(--cy-line);
+    color: var(--cy-text-2);
+    border-radius: 0;
+    clip-path: var(--cy-clip-btn);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-weight: 600;
+}
+.topbar-right .topbar-link:hover {
+    color: var(--cy-cyan);
+    border-color: var(--cy-cyan);
+    background: rgba(0,255,210,.06);
+    box-shadow: var(--cy-glow-cyan);
+}
+
+/* Inputs — Night City terminal */
+input, select, textarea {
+    background: var(--cy-bg-2) !important;
+    border: 1px solid var(--cy-line) !important;
+    color: var(--cy-text) !important;
+    border-radius: 0 !important;
+    font-family: "Rajdhani", sans-serif !important;
+    letter-spacing: .02em;
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+input:focus, select:focus, textarea:focus {
+    border-color: var(--cy-cyan) !important;
+    box-shadow: 0 0 0 1px var(--cy-cyan), 0 0 12px rgba(0,255,210,.25) !important;
+}
+input[type="password"] {
+    font-family: "Share Tech Mono", monospace !important;
+    letter-spacing: .25em;
+}
+label {
+    color: var(--cy-text-2);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    font-size: .72rem;
+    font-weight: 700;
+}
+small.muted { color: var(--cy-muted); text-transform: none; letter-spacing: 0; }
+
+/* Page headers */
+.page-header h1 {
+    font-family: "Orbitron", "Rajdhani", sans-serif;
+    font-weight: 700;
+    font-size: 1.55rem;
+    text-transform: uppercase;
+    letter-spacing: .02em;
+    color: var(--cy-text);
+    position: relative;
+    display: inline-block;
+    padding-right: 1rem;
+}
+.page-header h1::after {
+    content: "_";
+    color: var(--cy-cyan);
+    text-shadow: var(--cy-glow-cyan);
+    animation: cy-blink 1.1s steps(2) infinite;
+}
+.page-header .subtitle {
+    color: var(--cy-muted);
+    font-size: .85rem;
+    letter-spacing: .03em;
+}
+
+/* Cards = "cyber-tile" */
+.card,
+.hero {
+    background: linear-gradient(180deg, var(--cy-surface) 0%, var(--cy-surface-2) 100%);
+    border: 1px solid var(--cy-line);
+    border-radius: 0;
+    box-shadow:
+        inset 0 1px 0 rgba(0,255,210,.04),
+        0 8px 22px rgba(0,0,0,.32);
+    clip-path: var(--cy-clip-card);
+    position: relative;
+}
+.card::before {
+    /* corner accent — the angled bevel highlight on the top-right cut */
+    content: "";
+    position: absolute;
+    top: 0; right: 0;
+    width: var(--cy-corner);
+    height: var(--cy-corner);
+    background: linear-gradient(225deg, var(--cy-cyan) 0%, transparent 50%);
+    opacity: .85;
+}
+.card > header {
+    background: linear-gradient(90deg, rgba(0,255,210,.07), transparent 60%);
+    border-bottom: 1px solid var(--cy-line);
+    font-family: "Orbitron", "Rajdhani", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--cy-text);
+}
+.card > header::before {
+    content: "▸ ";
+    color: var(--cy-cyan);
+    text-shadow: var(--cy-glow-cyan);
+    margin-right: .25rem;
+}
+.card.danger {
+    border-color: rgba(255,42,109,.45);
+}
+.card.danger::before {
+    background: linear-gradient(225deg, var(--cy-magenta) 0%, transparent 50%);
+}
+.card.danger > header {
+    color: var(--cy-magenta);
+    background: linear-gradient(90deg, rgba(255,42,109,.10), transparent 60%);
+    border-bottom-color: rgba(255,42,109,.35);
+}
+
+/* Stat grid — make it a row of clipped HUD blocks */
+.stats-grid {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+    gap: .85rem;
+    grid-template-columns: repeat(4, minmax(150px, 1fr));
+}
+.stat {
+    background: linear-gradient(180deg, var(--cy-surface) 0%, var(--cy-surface-2) 100%);
+    border: 1px solid var(--cy-line) !important;
+    clip-path: var(--cy-clip-card);
+    padding: 1rem 1.1rem;
+    position: relative;
+    overflow: hidden;
+}
+.stat::before {
+    content: "";
+    position: absolute;
+    top: 0; right: 0;
+    width: 14px; height: 14px;
+    background: linear-gradient(225deg, var(--cy-cyan) 0%, transparent 50%);
+}
+.stat::after {
+    /* faint diagonal scan */
+    content: "";
+    position: absolute; inset: 0;
+    background:
+        repeating-linear-gradient(135deg, rgba(0,255,210,.03) 0 2px, transparent 2px 6px);
+    pointer-events: none;
+    display: block;
+    border-radius: 0;
+}
+.stat .stat-value {
+    font-family: "Orbitron", "Share Tech Mono", monospace;
+    font-weight: 700;
+    font-size: 1.6rem;
+    color: var(--cy-cyan);
+    text-shadow: 0 0 12px rgba(0,255,210,.35);
+    letter-spacing: -.02em;
+}
+.stat .stat-label {
+    color: var(--cy-text-2);
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    font-size: .7rem;
+    font-weight: 700;
+}
+.stat .stat-delta { color: var(--cy-muted); font-size: .78rem; }
+.stat .stat-delta.up { color: var(--cy-neon); }
+.stat .stat-delta.down { color: var(--cy-magenta); }
+
+/* Tables */
+table.data {
+    font-family: "Rajdhani", sans-serif;
+}
+table.data thead th {
+    background: var(--cy-bg-2);
+    color: var(--cy-cyan);
+    border-bottom: 1px solid var(--cy-line);
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    font-size: .68rem;
+    font-weight: 700;
+}
+table.data tbody td {
+    border-bottom: 1px solid var(--cy-line);
+    color: var(--cy-text-2);
+}
+table.data tbody tr:hover {
+    background: rgba(0,255,210,.04);
+    box-shadow: inset 3px 0 0 var(--cy-cyan);
+}
+table.data tbody tr:hover td { color: var(--cy-text); }
+table.data th.sort-asc::after,
+table.data th.sort-desc::after {
+    color: var(--cy-cyan);
+    text-shadow: var(--cy-glow-cyan);
+}
+
+/* Badges */
+.badge {
+    border-radius: 0 !important;
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    font-weight: 700;
+    font-size: .65rem;
+    padding: .2rem .55rem;
+    clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
+    border: 1px solid transparent !important;
+}
+.badge-ok    { background: rgba(57,255,20,.10);  color: var(--cy-neon);    border-color: var(--cy-neon) !important; box-shadow: 0 0 8px rgba(57,255,20,.18); }
+.badge-warn  { background: rgba(249,240,2,.10);  color: var(--cy-yellow);  border-color: var(--cy-yellow) !important; box-shadow: 0 0 8px rgba(249,240,2,.18); }
+.badge-err   { background: rgba(255,42,109,.10); color: var(--cy-magenta); border-color: var(--cy-magenta) !important; box-shadow: 0 0 8px rgba(255,42,109,.18); }
+.badge-info  { background: rgba(70,223,251,.10); color: var(--cy-cyan-2);  border-color: var(--cy-cyan-2) !important; }
+.badge-muted { background: rgba(125,133,144,.10);color: var(--cy-muted); border-color: var(--cy-muted) !important; }
+
+/* Switches — neon */
+.switch {
+    background: var(--cy-surface-3) !important;
+    border: 1px solid var(--cy-line) !important;
+    border-radius: 999px !important;
+    clip-path: none !important;
+}
+.switch::after { background: var(--cy-muted-2); box-shadow: 0 0 4px rgba(0,0,0,.4); }
+.switch.on {
+    background: var(--cy-cyan) !important;
+    border-color: var(--cy-cyan) !important;
+    box-shadow: var(--cy-glow-cyan);
+}
+.switch.on::after { background: #001714; box-shadow: 0 0 6px rgba(0,255,210,.85); }
+.switch.danger.on {
+    background: var(--cy-magenta) !important;
+    border-color: var(--cy-magenta) !important;
+    box-shadow: var(--cy-glow-magenta);
+}
+.switch.danger.on::after { background: #fff; }
+
+/* Banners */
+.banner {
+    background: linear-gradient(90deg, var(--cy-surface), var(--cy-surface-2));
+    border-left: 3px solid var(--cy-line);
+    border-radius: 0;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+    color: var(--cy-text-2);
+    font-weight: 500;
+    letter-spacing: .015em;
+}
+.banner-warn  { border-left-color: var(--cy-yellow);  color: var(--cy-yellow);  background: linear-gradient(90deg, rgba(249,240,2,.08), transparent 70%); }
+.banner-error { border-left-color: var(--cy-magenta); color: var(--cy-magenta); background: linear-gradient(90deg, rgba(255,42,109,.08), transparent 70%); }
+.banner-ok    { border-left-color: var(--cy-neon);    color: var(--cy-neon);    background: linear-gradient(90deg, rgba(57,255,20,.08),  transparent 70%); }
+
+/* Pager */
+.pager { color: var(--cy-muted); }
+.pager a {
+    background: transparent;
+    border: 1px solid var(--cy-line);
+    color: var(--cy-text-2);
+    border-radius: 0;
+    clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    font-size: .72rem;
+    font-weight: 700;
+}
+.pager a:hover {
+    background: rgba(0,255,210,.06);
+    color: var(--cy-cyan);
+    border-color: var(--cy-cyan);
+    box-shadow: var(--cy-glow-cyan);
+}
+
+/* Toggle cards (settings/dashboard module toggles) */
+.toggle-card {
+    background: var(--cy-surface);
+    border: 1px solid var(--cy-line) !important;
+    border-radius: 0 !important;
+    clip-path: var(--cy-clip-card);
+    color: var(--cy-text);
+}
+.toggle-card span { text-transform: uppercase; letter-spacing: .12em; font-size: .78rem; font-weight: 700; }
+.toggle-card small { color: var(--cy-muted); text-transform: none; letter-spacing: 0; font-weight: 400; }
+
+/* Dialog */
+dialog#confirm-modal {
+    background: var(--cy-surface);
+    border: 1px solid var(--cy-cyan);
+    color: var(--cy-text);
+    border-radius: 0;
+    clip-path: var(--cy-clip-card);
+    box-shadow: 0 0 0 1px rgba(0,255,210,.20), 0 24px 60px rgba(0,0,0,.65), var(--cy-glow-cyan);
+}
+dialog#confirm-modal::backdrop {
+    background: rgba(2,8,10,.78);
+    backdrop-filter: blur(2px) saturate(120%);
+}
+dialog#confirm-modal h3 {
+    font-family: "Orbitron", "Rajdhani", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    font-size: .95rem;
+    color: var(--cy-cyan);
+    text-shadow: 0 0 8px rgba(0,255,210,.35);
+}
+
+/* Menu/hamburger */
+.menu-btn { border: 1px solid var(--cy-line); border-radius: 0; }
+.menu-btn span { background: var(--cy-cyan); box-shadow: var(--cy-glow-cyan); }
+.menu-btn:hover { background: rgba(0,255,210,.08); border-color: var(--cy-cyan); }
+
+/* Focus rings — neon ring */
+:focus-visible {
+    outline-color: var(--cy-cyan);
+    outline-offset: 3px;
+}
+
+/* Login page */
+.login-page {
+    background:
+        radial-gradient(circle at 50% 0%, rgba(0,255,210,.10), transparent 26rem),
+        radial-gradient(circle at 50% 100%, rgba(255,42,109,.08), transparent 26rem),
+        var(--cy-bg) !important;
+}
+.login-card .login-mark {
+    background: linear-gradient(135deg, var(--cy-cyan) 0%, var(--cy-yellow) 100%);
+    color: #001714;
+    border: 0;
+    clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+    box-shadow: var(--cy-glow-cyan);
+    font-family: "Orbitron", sans-serif;
+    font-weight: 800;
+}
+.login-card header strong {
+    font-family: "Orbitron", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--cy-text);
+}
+.login-card header .muted { color: var(--cy-muted); }
+.btn-full { width: 100%; clip-path: var(--cy-clip-btn); }
+
+/* Inline edit ✓ button — terminal-style */
+.inline-edit input { font-family: "Share Tech Mono", monospace; font-size: .82rem; }
+.inline-edit button[type="submit"] {
+    background: transparent !important;
+    border: 1px solid var(--cy-line) !important;
+    color: var(--cy-cyan) !important;
+    clip-path: var(--cy-clip-btn);
+}
+.inline-edit button[type="submit"]:hover {
+    background: rgba(0,255,210,.10) !important;
+    color: var(--cy-cyan) !important;
+    border-color: var(--cy-cyan) !important;
+}
+
+/* Hero (dashboard banner) */
+.hero h2 {
+    font-family: "Orbitron", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--cy-text);
+}
+.hero p { color: var(--cy-muted); }
+
+/* Animated HR (where used) */
+hr {
+    border: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cy-cyan), transparent);
+    margin: 1rem 0;
+}
+
+/* Brand glitch FX — applied via class on the brand name. */
+.glitched {
+    position: relative;
+    display: inline-block;
+}
+.glitched::before,
+.glitched::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    overflow: hidden;
+    pointer-events: none;
+}
+.glitched::before {
+    color: var(--cy-magenta);
+    transform: translate(-1.5px, 0);
+    clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
+    animation: cy-glitch-shift 3.2s infinite steps(1);
+    mix-blend-mode: screen;
+    opacity: .85;
+}
+.glitched::after {
+    color: var(--cy-cyan);
+    transform: translate(1.5px, 0);
+    clip-path: polygon(0 55%, 100% 55%, 100% 100%, 0 100%);
+    animation: cy-glitch-shift 2.4s infinite steps(1) reverse;
+    mix-blend-mode: screen;
+    opacity: .85;
+}
+
+@keyframes cy-glitch-shift {
+    0%, 90%, 100% { transform: translate(0, 0); }
+    2%   { transform: translate(-2px, 1px); }
+    4%   { transform: translate( 2px,-1px); }
+    6%   { transform: translate(-1px, 0); }
+    8%   { transform: translate( 1px, 0); }
+    42%  { transform: translate(-3px, 0); }
+    44%  { transform: translate( 3px, 0); }
+    46%  { transform: translate( 0, 0); }
+}
+
+/* Subtle yellow/cyan flicker for the "pending" pill — looks alive */
+@keyframes cy-flicker {
+    0%, 92%, 100% { opacity: 1; }
+    93%           { opacity: .55; }
+    94%           { opacity: 1; }
+    96%           { opacity: .75; }
+    97%           { opacity: 1; }
+}
+
+/* Blinking terminal caret used after page titles */
+@keyframes cy-blink {
+    50% { opacity: 0; }
+}
+
+/* Hover-glitch on primary CTA buttons in page headers */
+.page-header .cta-link:hover {
+    animation: cy-glitch-jitter .35s ease-in-out;
+}
+@keyframes cy-glitch-jitter {
+    0%, 100% { transform: translate(0,0); }
+    25%      { transform: translate(-1px, 0); }
+    50%      { transform: translate(1px, -1px); }
+    75%      { transform: translate(-1px, 1px); }
+}
+
+/* Honor reduce-motion — kill scanlines + glitch animations. */
+@media (prefers-reduced-motion: reduce) {
+    body::before { background-image: none; }
+    .glitched::before, .glitched::after { display: none; }
+    .topbar-right .pill.warn { animation: none; }
+    .stat::after { display: none; }
+}
+
+/* Small-screen tightening */
+@media (max-width: 760px) {
+    .page-header h1 { font-size: 1.25rem; }
+    .stat .stat-value { font-size: 1.35rem; }
+    body::before { background-image: none; } /* scanlines off on mobile to keep paints cheap */
+}
+

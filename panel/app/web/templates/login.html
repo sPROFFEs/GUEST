@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>{{ gateway_name }} — sign in</title>
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <link rel="stylesheet" href="/static/style.css">
 </head>
@@ -13,8 +16,8 @@
     <article class="card login-card">
         <header>
             <span class="login-mark">{{ gateway_name[:1] | upper }}</span>
-            <strong>{{ gateway_name }}</strong>
-            <span class="muted">Sign in to manage this gateway.</span>
+            <strong class="glitched" data-text="{{ gateway_name }}">{{ gateway_name }}</strong>
+            <span class="muted">// Access terminal — sign in to continue.</span>
         </header>
         <div class="body">
             {% if error %}
