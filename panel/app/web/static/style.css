@@ -2829,8 +2829,7 @@ table.data button.btn-danger {
     min-width: 28px;
     clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px));
 }
-table.data .inline-edit input { width: 9rem; }
-table.data .inline-edit button { padding: 0 .55rem; min-width: 28px; height: 28px; }
+/* (intentionally left blank — superseded by the .inline-edit overrides below) */
 
 /* Stat tiles: the diagonal scan ::after overlay was sitting above content
    on some browsers — push it behind so the value isn't dimmed. */
@@ -2870,5 +2869,45 @@ table.data td.cell-tight:last-child {
 .login-card .btn-full {
     height: 44px;
     clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+/* ----- Inline-edit (the IP / Peer label save forms) — FORCED layout.
+   The input was being squashed to ~30px because Pico + flex-shrink + an
+   earlier `min-width: 0` rule were all conspiring against it. Lock the
+   input to a fixed flex-basis, button to auto, and disable shrinking. */
+.inline-edit {
+    display: inline-flex !important;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: .3rem;
+    width: auto;
+    max-width: 100%;
+}
+.inline-edit > input {
+    width: 11rem !important;
+    flex: 0 0 11rem !important;
+    min-width: 11rem !important;
+    height: 32px !important;
+    padding: 0 .55rem !important;
+    font-family: "Share Tech Mono", monospace !important;
+    font-size: .85rem;
+}
+.inline-edit > button,
+.inline-edit > button.btn-sm {
+    width: auto !important;
+    flex: 0 0 auto !important;
+    min-width: 34px !important;
+    height: 32px !important;
+    padding: 0 .65rem !important;
+    font-size: .95rem !important;
+}
+/* On narrower cells (peer label is inside a "peer pubkey" td which can be
+   tight), allow the input to shrink while still showing useful content. */
+@media (max-width: 1180px) {
+    .inline-edit > input {
+        width: 9rem !important;
+        flex: 0 0 9rem !important;
+        min-width: 7rem !important;
+    }
 }
 
