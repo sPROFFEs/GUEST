@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>{{ gateway_name }} — {% block title %}panel{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <link rel="stylesheet" href="/static/style.css">
@@ -54,18 +55,25 @@
             <div class="name">{{ gateway_name }}</div>
         </div>
         <nav>
+            {% macro navlink(href, label, ico, match=None) -%}
+                {%- set m = match or href -%}
+                {%- set is_active = (path == href) if href == '/' else path.startswith(m) -%}
+                <a href="{{ href }}" class="{{ 'active' if is_active }}"
+                   {% if is_active %}aria-current="page"{% endif %}>{{ icon(ico) }}<span>{{ label }}</span></a>
+            {%- endmacro %}
+
             <div class="section-label">Overview</div>
-            <a href="/" class="{{ 'active' if path == '/' }}">{{ icon('home') }}<span>Dashboard</span></a>
+            {{ navlink('/', 'Dashboard', 'home') }}
 
             <div class="section-label">Network</div>
-            <a href="/peers"      class="{{ 'active' if path.startswith('/peers') }}">{{ icon('users') }}<span>Peers</span></a>
-            <a href="/hosts"      class="{{ 'active' if path.startswith('/hosts') }}">{{ icon('server') }}<span>Internal hosts</span></a>
-            <a href="/lan-egress" class="{{ 'active' if path.startswith('/lan-egress') }}">{{ icon('shield') }}<span>LAN egress</span></a>
+            {{ navlink('/peers',      'Peers',          'users') }}
+            {{ navlink('/hosts',      'Internal hosts', 'server') }}
+            {{ navlink('/lan-egress', 'LAN egress',     'shield') }}
 
             <div class="section-label">Admin</div>
-            <a href="/users"    class="{{ 'active' if path.startswith('/users') }}">{{ icon('user') }}<span>Users</span></a>
-            <a href="/settings" class="{{ 'active' if path.startswith('/settings') }}">{{ icon('sliders') }}<span>Settings</span></a>
-            <a href="/audit"    class="{{ 'active' if path.startswith('/audit') }}">{{ icon('list') }}<span>Audit log</span></a>
+            {{ navlink('/users',    'Users',     'user') }}
+            {{ navlink('/settings', 'Settings',  'sliders') }}
+            {{ navlink('/audit',    'Audit log', 'list') }}
         </nav>
 
         <div class="who">

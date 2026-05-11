@@ -57,15 +57,9 @@
     <header>Change your password</header>
     <div class="body">
         {% if password_flash %}
-            {% if password_flash[0] == 'ok' %}
-            <div class="banner" style="background:rgba(60,180,95,.10);color:#9fe6ad;border-color:#3cb45f;margin-bottom:1rem">
-                <span>{{ password_flash[1] }}</span>
-            </div>
-            {% else %}
-            <div class="banner banner-error" style="margin-bottom:1rem">
-                <span>{{ password_flash[1] }}</span>
-            </div>
-            {% endif %}
+        <div class="banner {{ 'banner-ok' if password_flash[0] == 'ok' else 'banner-error' }}">
+            <span>{{ password_flash[1] }}</span>
+        </div>
         {% endif %}
         <form method="post" action="/me/password">
             <div class="form-grid">

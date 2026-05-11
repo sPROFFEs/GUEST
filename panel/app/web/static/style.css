@@ -1762,3 +1762,169 @@ textarea:focus {
         border-bottom: 0;
     }
 }
+
+/* =========================================================================
+   Polish pass — focus, banners, mobile menu, link affordances, motion
+   Appended after the sober pass; non-destructive to existing rules.
+   ========================================================================= */
+
+/* Visible keyboard focus everywhere — earlier passes only set it on inputs. */
+:focus-visible {
+    outline: 2px solid var(--primary, #d8dedb);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+button:focus-visible,
+.cta-link:focus-visible,
+.topbar-btn:focus-visible,
+.topbar-link:focus-visible,
+.sidebar nav a:focus-visible,
+.pager a:focus-visible {
+    outline-offset: 2px;
+}
+.switch:focus-visible {
+    outline: 2px solid var(--primary, #d8dedb);
+    outline-offset: 3px;
+}
+
+/* Smoother feedback on toggles + nav. */
+.sidebar nav a { transition: background .12s ease, color .12s ease, box-shadow .12s ease; }
+.switch, .switch::after { transition: background .18s ease, transform .18s ease; }
+.badge { transition: background .12s ease, color .12s ease; }
+
+/* Success banner — replaces the hardcoded inline-styled green banners
+   that templates used to render flash messages. */
+.banner-ok {
+    background: var(--success-bg);
+    color: var(--success);
+    border-left: 3px solid var(--success);
+}
+.banner-ok strong { color: var(--text); }
+
+/* Anchor styled as a secondary button — used in places like
+   "← Back to peers" where an <a class="secondary"> is intended to look
+   like a button. Previously these collapsed to plain links. */
+a.secondary,
+a.cta-link.secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .35rem .8rem;
+    min-height: 32px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-2);
+    font-size: .88rem;
+    font-weight: 500;
+    text-decoration: none;
+}
+a.secondary:hover,
+a.cta-link.secondary:hover {
+    color: var(--text);
+    border-color: var(--text-2);
+    background: var(--surface);
+}
+
+/* The page-header CTA link on /peers — small but visible primary action. */
+.page-header .cta-link {
+    padding: .45rem .9rem;
+    font-size: .88rem;
+    text-decoration: none;
+}
+
+/* Topbar Apply button — make the icon align vertically with the text. */
+.topbar-btn .icon { vertical-align: middle; }
+
+/* Mobile menu button — wire it up to toggle the sidebar.
+   Hidden above 1024px (where the sidebar is permanent anyway). */
+.menu-btn {
+    cursor: pointer;
+    display: none;
+}
+@media (max-width: 1024px) {
+    .menu-btn { display: inline-flex; }
+    /* Collapsed sidebar = effectively invisible but in DOM. */
+    .app.nav-collapsed .sidebar {
+        max-height: 0 !important;
+        padding: 0 !important;
+        overflow: hidden;
+        border-bottom: 0;
+    }
+    .app.nav-collapsed .sidebar > * { display: none; }
+}
+
+/* Page header layout: keep title + CTA on one line when there's room,
+   wrap gracefully on narrow screens. */
+.page-header { gap: 1rem 1.5rem; }
+.page-header > div:first-child { min-width: 0; flex: 1 1 20rem; }
+
+/* Inline edit buttons — make the ✓ button feel like a button, not a tick. */
+.inline-edit button[type="submit"] {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-2);
+}
+.inline-edit button[type="submit"]:hover {
+    background: var(--surface-hi);
+    color: var(--text);
+    border-color: var(--text-2);
+}
+
+/* Danger zone affordance — the hardcoded inline border + red header colour
+   on hosts.html aren't quite consistent. Use a class instead. */
+.card.danger {
+    border-color: rgba(217, 135, 135, .35);
+}
+.card.danger > header {
+    color: var(--danger);
+}
+
+/* Pager: tighten alignment, hide empty filter blocks. */
+.pager a { transition: background .12s ease, color .12s ease, border-color .12s ease; }
+
+/* Selection ring on tables — show focus when navigating rows via tab. */
+table.data a:focus-visible {
+    outline-offset: 1px;
+}
+
+/* Modal: add a subtle entry animation. */
+dialog#confirm-modal[open] {
+    animation: panel-modal-in .14s ease-out;
+}
+@keyframes panel-modal-in {
+    from { opacity: 0; transform: translateY(-4px) scale(.98); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* Reduce motion preference — honor it. */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+    }
+}
+
+/* Login card — give the form rows a touch more breathing room. */
+.login-card form label { display: block; margin-bottom: .75rem; }
+.login-card form label:last-of-type { margin-bottom: 1rem; }
+
+/* Audit filter row — vertically center inputs with the button. */
+.card > header form.filters select,
+.card > header form.filters input,
+.card > header form.filters button {
+    height: 32px;
+    margin: 0;
+}
+
+/* Better disabled-link styling on the pager. */
+.pager a.disabled { cursor: not-allowed; }
+
+/* Make code chips inside paragraphs not look like buttons on hover. */
+code, .mono { transition: none; }
+
+/* Empty state: a touch more polish. */
+.empty h3 { font-weight: 600; }
+.empty p  { max-width: 30rem; margin-left: auto; margin-right: auto; }
+

@@ -13,8 +13,7 @@
 </div>
 
 {% if peer_flash %}
-<div class="banner {{ 'banner-error' if peer_flash[0] == 'error' else '' }}"
-     style="{{ '' if peer_flash[0] == 'error' else 'background:rgba(60,180,95,.10);color:#9fe6ad;border-color:#3cb45f;' }}margin-bottom:1rem">
+<div class="banner {{ 'banner-error' if peer_flash[0] == 'error' else 'banner-ok' }}">
     <span>{{ peer_flash[1] }}</span>
 </div>
 {% endif %}

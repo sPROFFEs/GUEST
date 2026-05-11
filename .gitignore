@@ -1,0 +1,22 @@
+# Local backup helper — not part of the project
+backup.sh
+backup_*.sh
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Local config / runtime
+gateway.toml
+*.sqlite
+*.sqlite-journal
+*.log

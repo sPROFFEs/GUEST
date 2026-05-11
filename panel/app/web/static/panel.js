@@ -109,6 +109,44 @@
         document.querySelectorAll("svg[data-sparkline]").forEach(drawSparkline);
     });
 
+    /* ----------- Mobile sidebar toggle -----------
+     * Wires the topbar hamburger to collapse/expand the sidebar on narrow
+     * viewports. Above 1024px the sidebar is permanent and the button is
+     * hidden via CSS. */
+    document.addEventListener("DOMContentLoaded", () => {
+        const btn = document.querySelector(".menu-btn");
+        const app = document.querySelector(".app");
+        if (!btn || !app) return;
+        btn.removeAttribute("aria-hidden");
+        btn.setAttribute("role", "button");
+        btn.setAttribute("tabindex", "0");
+        btn.setAttribute("aria-label", "Toggle navigation");
+        btn.setAttribute("aria-expanded", "true");
+        // Collapsed by default on narrow viewports so the topbar isn't
+        // dominated by a tall sidebar on first paint.
+        const setCollapsed = (collapsed) => {
+            app.classList.toggle("nav-collapsed", collapsed);
+            btn.setAttribute("aria-expanded", String(!collapsed));
+        };
+        if (window.matchMedia("(max-width: 1024px)").matches) setCollapsed(true);
+        const toggle = () => setCollapsed(!app.classList.contains("nav-collapsed"));
+        btn.addEventListener("click", toggle);
+        btn.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
+        });
+    });
+
+    /* ----------- Confirm modal: Escape + backdrop click ----------- */
+    document.addEventListener("DOMContentLoaded", () => {
+        const dlg = document.getElementById("confirm-modal");
+        if (!dlg) return;
+        dlg.addEventListener("click", (e) => {
+            // Native dialog gives the dialog element itself as target on
+            // backdrop clicks; clicks inside <article> land elsewhere.
+            if (e.target === dlg) dlg.close();
+        });
+    });
+
     /* ----------- Scroll restoration across form posts -----------
      * The panel uses POST → 303 → GET redirects everywhere. Without help,
      * every toggle / save / scan resets the scroll to the top. We stash the

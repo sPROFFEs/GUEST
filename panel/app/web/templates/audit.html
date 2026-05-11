@@ -11,7 +11,7 @@
 
 <article class="card">
     <header>
-        <form method="get" action="/audit" class="filters" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:0">
+        <form method="get" action="/audit" class="filters">
             <select name="actor">
                 <option value="">all actors</option>
                 {% for a in actors %}
@@ -76,9 +76,14 @@
     <div class="pager">
         <span>Page {{ page }} of {{ pages }} — showing {{ rows|length }} of {{ total }}</span>
         <span>
-            {% set base = "/audit?actor=" + filter_actor + "&action=" + filter_action + "&q=" + filter_q %}
-            <a href="{{ base }}&page={{ page - 1 }}" class="{{ 'disabled' if page <= 1 }}">← prev</a>
-            <a href="{{ base }}&page={{ page + 1 }}" class="{{ 'disabled' if page >= pages }}">next →</a>
+            {% set qs = {} %}
+            {% if filter_actor %}{% set _ = qs.update({'actor': filter_actor}) %}{% endif %}
+            {% if filter_action %}{% set _ = qs.update({'action': filter_action}) %}{% endif %}
+            {% if filter_q %}{% set _ = qs.update({'q': filter_q}) %}{% endif %}
+            {% set _ = qs.update({'page': page - 1}) %}
+            <a href="/audit?{{ qs|urlencode }}" class="{{ 'disabled' if page <= 1 }}">← prev</a>
+            {% set _ = qs.update({'page': page + 1}) %}
+            <a href="/audit?{{ qs|urlencode }}" class="{{ 'disabled' if page >= pages }}">next →</a>
         </span>
     </div>
     {% endif %}
