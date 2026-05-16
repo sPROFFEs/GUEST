@@ -64,7 +64,11 @@
                         <span class="badge badge-muted">offline</span>
                     {% endif %}
                 </td>
-                {% set pk_url = p.pubkey | replace('/', '%2F') %}
+                {# pubkey goes in the path as-is. The server routes use the
+                   {pubkey:path} converter, which matches the base64 '/' chars
+                   correctly. Percent-encoding '/' as %2F doesn't help — ASGI
+                   decodes it back before routing — and trips some proxies. #}
+                {% set pk_url = p.pubkey %}
                 <td title="pubkey: {{ p.pubkey }}">
                     <form method="post" action="/peers/{{ pk_url }}/label" class="inline-edit">
                         <input name="label" value="{{ p.label }}" placeholder="add label">

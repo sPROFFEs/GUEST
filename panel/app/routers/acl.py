@@ -24,7 +24,7 @@ def _parse_port(value: str) -> int | None:
     return port
 
 
-@router.get("/api/peers/{pubkey}/acl")
+@router.get("/api/peers/{pubkey:path}/acl")
 def api_list(pubkey: str, request: Request, user: str = Depends(require_user)):
     conn = request.app.state.db
     rows = conn.execute(
@@ -33,7 +33,7 @@ def api_list(pubkey: str, request: Request, user: str = Depends(require_user)):
     return {"rules": [dict(r) for r in rows]}
 
 
-@router.post("/peers/{pubkey}/acl")
+@router.post("/peers/{pubkey:path}/acl")
 def add(
     pubkey: str,
     dst_cidr: str = Form(...),

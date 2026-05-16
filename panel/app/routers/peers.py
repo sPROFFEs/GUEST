@@ -58,7 +58,7 @@ def api_list(request: Request, user: str = Depends(require_user)):
     return {"peers": _list(conn, cfg)}
 
 
-@router.post("/peers/{pubkey}/toggle")
+@router.post("/peers/{pubkey:path}/toggle")
 def toggle(pubkey: str, request: Request, field: str = Form(...), user: str = Depends(require_user)):
     if field not in {"blocked", "tor_routed"}:
         raise HTTPException(400, "bad field")
@@ -84,7 +84,7 @@ def toggle(pubkey: str, request: Request, field: str = Form(...), user: str = De
     return RedirectResponse(url="/peers", status_code=303)
 
 
-@router.post("/peers/{pubkey}/label")
+@router.post("/peers/{pubkey:path}/label")
 def set_label(pubkey: str, request: Request, label: str = Form(""), user: str = Depends(require_user)):
     if not _valid_pubkey(pubkey):
         return _flash(request, "error", "Invalid peer key.")

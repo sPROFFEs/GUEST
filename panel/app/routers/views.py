@@ -179,7 +179,7 @@ def peers_view(request: Request, user: str = Depends(require_user)):
     })
 
 
-@router.get("/peers/{pubkey}/acl", response_class=HTMLResponse)
+@router.get("/peers/{pubkey:path}/acl", response_class=HTMLResponse)
 def acl_view(pubkey: str, request: Request, user: str = Depends(require_user)):
     conn = request.app.state.db
     rules = [dict(r) for r in conn.execute(
