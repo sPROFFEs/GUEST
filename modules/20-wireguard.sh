@@ -4,6 +4,7 @@
 set -euo pipefail
 
 : "${GATEWAY_LAN_IFACE:?}"
+: "${GATEWAY_WAN_IFACE:?}"
 : "${WIREGUARD_LISTEN_PORT:?}"
 : "${WIREGUARD_PEER_CIDR:?}"
 : "${PANEL_WGD_BIND_ADDR:?}"
@@ -137,11 +138,18 @@ table inet gateway {
     chain forward {
         # Hard block always wins; panel ACLs cannot re-allow blocked peers.
         iifname "wg0" oifname "${GATEWAY_LAN_IFACE}" ip saddr @blocked_peers drop
+        iifname "wg0" oifname "${GATEWAY_WAN_IFACE}" ip saddr @blocked_peers drop
 
         # Panel ACLs must run before the broad WG-to-LAN accept below.
         iifname "wg0" oifname "${GATEWAY_LAN_IFACE}" jump panel_forward
 
         iifname "wg0" oifname "${GATEWAY_LAN_IFACE}" accept
+
+        # WG peers → internet. Tor-routed peers are caught earlier by the
+        # REDIRECT in prerouting_nat (marked traffic never reaches forward),
+        # so this only carries clear-WAN egress. The safety net in 30-tor.nft
+        # drops any marked packet that somehow leaks past redirection.
+        iifname "wg0" oifname "${GATEWAY_WAN_IFACE}" accept
     }
 }
 EOF
