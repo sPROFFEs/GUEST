@@ -203,7 +203,7 @@ def apply(conn: sqlite3.Connection, cfg: Config, actor: str) -> None:
             check=True, capture_output=True, text=True,
         )
         subprocess.run(
-            ["sudo", "/bin/systemctl", "restart", "dnsmasq"],
+            ["sudo", "/usr/bin/systemctl", "restart", "dnsmasq"],
             check=True, capture_output=True, text=True,
         )
     except subprocess.CalledProcessError as e:
@@ -220,7 +220,7 @@ def apply(conn: sqlite3.Connection, cfg: Config, actor: str) -> None:
         # best-effort reload; don't mask the original error
         subprocess.run(["sudo", "/usr/sbin/nft", "-f", "/etc/nftables.conf"],
                        check=False, capture_output=True)
-        subprocess.run(["sudo", "/bin/systemctl", "restart", "dnsmasq"],
+        subprocess.run(["sudo", "/usr/bin/systemctl", "restart", "dnsmasq"],
                        check=False, capture_output=True)
         dbmod.audit(conn, actor, "apply.fail", detail=("[post-swap] " + msg)[:500])
         raise ApplyError(msg) from e

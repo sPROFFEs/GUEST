@@ -176,35 +176,73 @@ WIPE
 chmod 0755 /usr/local/sbin/gateway-lan-reset
 
 cat > /etc/sudoers.d/gateway-panel <<'EOF'
-# Validation (read-only) — staged renders before swap, plus the full ruleset.
-gateway ALL=(root) NOPASSWD: /usr/sbin/nft -c -f /var/lib/gateway/render/*
-gateway ALL=(root) NOPASSWD: /usr/sbin/nft -c -f /etc/nftables.conf
-# Live ruleset apply.
-gateway ALL=(root) NOPASSWD: /usr/sbin/nft -f /etc/nftables.conf
-# Read-only inspection (used by dashboard diagnostics).
-gateway ALL=(root) NOPASSWD: /usr/sbin/nft list set inet gateway *
-gateway ALL=(root) NOPASSWD: /usr/sbin/nft list table inet gateway
-# Service control.
-gateway ALL=(root) NOPASSWD: /bin/systemctl reload nftables
-gateway ALL=(root) NOPASSWD: /bin/systemctl restart dnsmasq
-gateway ALL=(root) NOPASSWD: /bin/systemctl is-active *
-gateway ALL=(root) NOPASSWD: /bin/systemctl status *
-gateway ALL=(root) NOPASSWD: /bin/systemctl start tor
-gateway ALL=(root) NOPASSWD: /bin/systemctl stop tor
-gateway ALL=(root) NOPASSWD: /bin/systemctl start tor@default
-gateway ALL=(root) NOPASSWD: /bin/systemctl stop tor@default
-gateway ALL=(root) NOPASSWD: /bin/systemctl restart tor@default
-gateway ALL=(root) NOPASSWD: /bin/systemctl start wg-quick@wg0
-gateway ALL=(root) NOPASSWD: /bin/systemctl stop wg-quick@wg0
-gateway ALL=(root) NOPASSWD: /bin/systemctl start dnsmasq
-gateway ALL=(root) NOPASSWD: /bin/systemctl stop dnsmasq
-# Config swaps from staged renders.
-gateway ALL=(root) NOPASSWD: /usr/bin/install -m 0644 /var/lib/gateway/render/* /etc/nftables.d/50-panel.nft
-gateway ALL=(root) NOPASSWD: /usr/bin/install -m 0644 /var/lib/gateway/render/* /etc/dnsmasq.d/gateway-hosts.conf
-# DHCP lease management: release individual leases (when deleting a host) and
-# the full wipe used by the "Reset LAN state" action.
-gateway ALL=(root) NOPASSWD: /usr/bin/dhcp_release *
-gateway ALL=(root) NOPASSWD: /usr/local/sbin/gateway-lan-reset
+# Managed by gateway installer (40-panel).
+# Privilege boundary for the unprivileged 'gateway' user: every root command
+# the panel applier or diagnostics needs goes here, nothing else.
+#
+# Written in Cmnd_Alias form so that strict parsers (notably sudo-rs, which
+# ships as the default sudo on Ubuntu 25.10+/26.04) accept it. Earlier
+# revisions used trailing-wildcard rules like `systemctl is-active *` which
+# sudo-rs rejects with a syntax error. We enumerate every service we need
+# instead — the list is small and explicit is safer anyway.
+#
+# Paths are deliberately /usr/bin/systemctl (canonical on Ubuntu; resolves
+# identically on Debian 12 via merged-usr). Keep the panel code in sync.
+
+Cmnd_Alias GW_NFT_VALIDATE = /usr/sbin/nft -c -f /var/lib/gateway/render/*, \
+                             /usr/sbin/nft -c -f /etc/nftables.conf
+
+Cmnd_Alias GW_NFT_APPLY    = /usr/sbin/nft -f /etc/nftables.conf
+
+Cmnd_Alias GW_NFT_INSPECT  = /usr/sbin/nft list set inet gateway blocked_peers, \
+                             /usr/sbin/nft list set inet gateway tor_peers, \
+                             /usr/sbin/nft list set inet gateway blocked_hosts, \
+                             /usr/sbin/nft list set inet gateway tor_hosts, \
+                             /usr/sbin/nft list table inet gateway
+
+Cmnd_Alias GW_SVC_STATE    = /usr/bin/systemctl is-active dnsmasq, \
+                             /usr/bin/systemctl is-active nftables, \
+                             /usr/bin/systemctl is-active wg-quick@wg0, \
+                             /usr/bin/systemctl is-active wgdashboard, \
+                             /usr/bin/systemctl is-active tor, \
+                             /usr/bin/systemctl is-active tor@default, \
+                             /usr/bin/systemctl is-active gateway-panel, \
+                             /usr/bin/systemctl status dnsmasq, \
+                             /usr/bin/systemctl status nftables, \
+                             /usr/bin/systemctl status wg-quick@wg0, \
+                             /usr/bin/systemctl status tor@default, \
+                             /usr/bin/systemctl status gateway-panel
+
+Cmnd_Alias GW_SVC_CONTROL  = /usr/bin/systemctl reload nftables, \
+                             /usr/bin/systemctl start dnsmasq, \
+                             /usr/bin/systemctl stop dnsmasq, \
+                             /usr/bin/systemctl restart dnsmasq, \
+                             /usr/bin/systemctl start wg-quick@wg0, \
+                             /usr/bin/systemctl stop wg-quick@wg0, \
+                             /usr/bin/systemctl start tor, \
+                             /usr/bin/systemctl stop tor, \
+                             /usr/bin/systemctl start tor@default, \
+                             /usr/bin/systemctl stop tor@default, \
+                             /usr/bin/systemctl restart tor@default
+
+# Config swaps from staged renders. The wildcard here is a path glob (matches
+# anything in the render dir, no whitespace/slash) — sudo-rs accepts this form.
+Cmnd_Alias GW_SWAP_NFT     = /usr/bin/install -m 0644 /var/lib/gateway/render/* /etc/nftables.d/50-panel.nft
+Cmnd_Alias GW_SWAP_DNS     = /usr/bin/install -m 0644 /var/lib/gateway/render/* /etc/dnsmasq.d/gateway-hosts.conf
+
+# DHCP lease management: per-lease release takes runtime args (iface, ip, mac),
+# so the trailing wildcard is genuinely required here.
+Cmnd_Alias GW_DHCP         = /usr/bin/dhcp_release *, \
+                             /usr/local/sbin/gateway-lan-reset
+
+gateway ALL=(root) NOPASSWD: GW_NFT_VALIDATE, \
+                             GW_NFT_APPLY, \
+                             GW_NFT_INSPECT, \
+                             GW_SVC_STATE, \
+                             GW_SVC_CONTROL, \
+                             GW_SWAP_NFT, \
+                             GW_SWAP_DNS, \
+                             GW_DHCP
 EOF
 chmod 440 /etc/sudoers.d/gateway-panel
 visudo -cf /etc/sudoers.d/gateway-panel

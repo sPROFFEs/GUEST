@@ -94,7 +94,7 @@ def dashboard(request: Request, user: str = Depends(require_user)):
     services = {}
     for key, svc in _SERVICE_FOR_TOGGLE.items():
         r = subprocess.run(
-            ["sudo", "/bin/systemctl", "is-active", svc],
+            ["sudo", "/usr/bin/systemctl", "is-active", svc],
             capture_output=True, text=True,
         )
         services[svc] = r.stdout.strip() or "unknown"

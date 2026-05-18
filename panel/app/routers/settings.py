@@ -39,7 +39,7 @@ def toggle(key: str = Form(...), request: Request = None, user: str = Depends(re
     # need an explicit Apply because they depend on the rendered fragment.
     svc = _SERVICE_FOR_TOGGLE[key]
     action = "start" if new == "true" else "stop"
-    subprocess.run(["sudo", "/bin/systemctl", action, svc], check=False)
+    subprocess.run(["sudo", "/usr/bin/systemctl", action, svc], check=False)
 
     return RedirectResponse(url=target, status_code=303)
 
@@ -70,7 +70,7 @@ def status(request: Request, user: str = Depends(require_user)):
     }
     for key, svc in _SERVICE_FOR_TOGGLE.items():
         r = subprocess.run(
-            ["sudo", "/bin/systemctl", "is-active", svc],
+            ["sudo", "/usr/bin/systemctl", "is-active", svc],
             capture_output=True, text=True,
         )
         out["services"][svc] = r.stdout.strip()
