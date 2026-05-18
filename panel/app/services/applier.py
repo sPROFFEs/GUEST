@@ -209,14 +209,19 @@ def apply(conn: sqlite3.Connection, cfg: Config, actor: str) -> None:
     except subprocess.CalledProcessError as e:
         msg = (e.stderr or e.stdout or str(e)).strip()
         log.error("apply failed post-swap, rolling back: %s", msg)
-        # restore each saved file (snapshot may be empty if first run)
-        for name, target in (
-            ("50-panel.nft", cfg.nft_panel_fragment),
-            ("gateway-hosts.conf", cfg.dnsmasq_hosts),
+        # restore each saved file (snapshot may be empty if first run).
+        # We copy the snapshot into the render dir first so the sudo install
+        # rule only ever sees the fixed staged path -- sudoers can't allow
+        # snapshot paths directly because sudo-rs forbids wildcards.
+        for name, staged_name, target in (
+            ("50-panel.nft", "50-panel.nft.new", cfg.nft_panel_fragment),
+            ("gateway-hosts.conf", "gateway-hosts.conf.new", cfg.dnsmasq_hosts),
         ):
             saved = snap / name
             if saved.exists():
-                _write_via_sudo(saved, target)
+                staged = cfg.render_dir / staged_name
+                shutil.copy2(saved, staged)
+                _write_via_sudo(staged, target)
         # best-effort reload; don't mask the original error
         subprocess.run(["sudo", "/usr/sbin/nft", "-f", "/etc/nftables.conf"],
                        check=False, capture_output=True)

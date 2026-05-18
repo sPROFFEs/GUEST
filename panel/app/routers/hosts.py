@@ -55,7 +55,7 @@ def _release_lease(lan_iface: str, ip: str, mac: str) -> None:
         return
     try:
         subprocess.run(
-            ["sudo", "/usr/bin/dhcp_release", lan_iface, ip, mac],
+            ["sudo", "/usr/local/sbin/gateway-dhcp-release", lan_iface, ip, mac],
             check=False, capture_output=True, timeout=3,
         )
     except (FileNotFoundError, subprocess.TimeoutExpired) as e:

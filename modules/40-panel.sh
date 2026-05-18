@@ -175,6 +175,28 @@ systemctl start dnsmasq
 WIPE
 chmod 0755 /usr/local/sbin/gateway-lan-reset
 
+# --- DHCP-release helper -------------------------------------------------
+# Validates iface/ip/mac strictly, then calls dhcp_release. The helper exists
+# so sudoers can allow a single fixed command (no wildcards) -- sudo-rs on
+# Ubuntu 25.10+/26.04 rejects wildcards in command arguments entirely.
+cat > /usr/local/sbin/gateway-dhcp-release <<'DHCPR'
+#!/usr/bin/env bash
+set -e
+if [ "$#" -ne 3 ]; then
+    echo "usage: $0 <iface> <ip> <mac>" >&2
+    exit 2
+fi
+IFACE=$1
+IP=$2
+MAC=$3
+# Strict validation: keep argv tightly bounded since this runs as root.
+echo "$IFACE" | grep -Eq '^[a-z][a-z0-9_-]{0,14}$' || { echo "bad iface" >&2; exit 2; }
+echo "$IP"    | grep -Eq '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' || { echo "bad ip" >&2; exit 2; }
+echo "$MAC"   | grep -Eq '^[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}$' || { echo "bad mac" >&2; exit 2; }
+exec /usr/bin/dhcp_release "$IFACE" "$IP" "$MAC"
+DHCPR
+chmod 0755 /usr/local/sbin/gateway-dhcp-release
+
 cat > /etc/sudoers.d/gateway-panel <<'EOF'
 # Managed by gateway installer (40-panel).
 # Privilege boundary for the unprivileged gateway user.
@@ -216,10 +238,8 @@ gateway ALL=(root) NOPASSWD: /usr/bin/systemctl stop tor@default
 gateway ALL=(root) NOPASSWD: /usr/bin/systemctl restart tor@default
 gateway ALL=(root) NOPASSWD: /usr/bin/install -m 0644 /var/lib/gateway/render/50-panel.nft.new /etc/nftables.d/50-panel.nft
 gateway ALL=(root) NOPASSWD: /usr/bin/install -m 0644 /var/lib/gateway/render/gateway-hosts.conf.new /etc/dnsmasq.d/gateway-hosts.conf
-gateway ALL=(root) NOPASSWD: /usr/bin/install -m 0644 /var/lib/gateway/snapshots/[0-9]*-[0-9]*/50-panel.nft /etc/nftables.d/50-panel.nft
-gateway ALL=(root) NOPASSWD: /usr/bin/install -m 0644 /var/lib/gateway/snapshots/[0-9]*-[0-9]*/gateway-hosts.conf /etc/dnsmasq.d/gateway-hosts.conf
-gateway ALL=(root) NOPASSWD: /usr/bin/dhcp_release [a-z]* [0-9]* [0-9a-fA-F:]*
 gateway ALL=(root) NOPASSWD: /usr/local/sbin/gateway-lan-reset
+gateway ALL=(root) NOPASSWD: /usr/local/sbin/gateway-dhcp-release
 EOF
 chmod 440 /etc/sudoers.d/gateway-panel
 visudo -cf /etc/sudoers.d/gateway-panel
