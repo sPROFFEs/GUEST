@@ -47,6 +47,10 @@ def load() -> Config:
     with open(toml_path, "rb") as f:
         t = tomllib.load(f)
 
+    # [wireguard] is optional -- the wireguard module can be disabled in
+    # [modules], in which case the section may be absent or trimmed. The
+    # panel must still come up so admins can manage non-wg state.
+    wg = t.get("wireguard", {}) or {}
     return Config(
         db_path=db_path,
         toml_path=toml_path,
@@ -56,8 +60,8 @@ def load() -> Config:
         wan_iface=t["gateway"]["wan_iface"],
         lan_iface=t["gateway"]["lan_iface"],
         lan_cidr=t["gateway"]["lan_cidr"],
-        wg_listen_port=int(t["wireguard"]["listen_port"]),
-        wg_peer_cidr=t["wireguard"]["peer_cidr"],
+        wg_listen_port=int(wg.get("listen_port", 0)),
+        wg_peer_cidr=wg.get("peer_cidr", ""),
         dhcp_range=t["dhcp"]["range"],
         tor_trans_port=int(t.get("tor", {}).get("trans_port", 9040)),
         tor_dns_port=int(t.get("tor", {}).get("dns_port", 5353)),
