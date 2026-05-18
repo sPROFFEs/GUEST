@@ -7,20 +7,46 @@ set -euo pipefail
 : "${GATEWAY_LAN_IFACE:?missing in toml}"
 : "${GATEWAY_LAN_CIDR:?missing in toml}"
 
-# --- LAN interface (static IP via ifupdown) ---
-# Debian 12 default install uses ifupdown. We write a per-iface snippet so the
-# main /etc/network/interfaces (managed by the installer image) stays untouched.
-cat > /etc/network/interfaces.d/gateway-lan <<EOF
+# --- LAN interface (static IP) ---
+# Two supported backends:
+#   - ifupdown      (Debian 12 minimal default)
+#   - netplan       (Ubuntu Server 22.04/24.04 default; renders to networkd)
+# Detect by what's actually installed rather than by distro ID — some Debian
+# images ship netplan, some Ubuntu setups ship ifupdown. We write a per-iface
+# fragment in both cases so the image's main config stays untouched.
+LAN_IP_ONLY="${GATEWAY_LAN_CIDR%/*}"
+
+if command -v netplan >/dev/null 2>&1 && [[ -d /etc/netplan ]]; then
+    NETPLAN_FILE=/etc/netplan/90-gateway-lan.yaml
+    cat > "$NETPLAN_FILE" <<EOF
+# Managed by gateway installer
+network:
+  version: 2
+  ethernets:
+    ${GATEWAY_LAN_IFACE}:
+      dhcp4: false
+      dhcp6: false
+      accept-ra: false
+      addresses:
+        - ${GATEWAY_LAN_CIDR}
+EOF
+    # netplan refuses world-readable files since 0.106 — silence the warning.
+    chmod 0600 "$NETPLAN_FILE"
+    netplan apply
+else
+    command -v ifup >/dev/null \
+        || { echo "neither netplan nor ifupdown found — install one" >&2; exit 1; }
+    cat > /etc/network/interfaces.d/gateway-lan <<EOF
 # Managed by gateway installer
 auto ${GATEWAY_LAN_IFACE}
 iface ${GATEWAY_LAN_IFACE} inet static
     address ${GATEWAY_LAN_CIDR}
 EOF
-
-# Bring up. Tolerate "already configured" — this is the idempotent path.
-if ! ip -4 addr show dev "${GATEWAY_LAN_IFACE}" 2>/dev/null | grep -q "${GATEWAY_LAN_CIDR}"; then
-    ifdown "${GATEWAY_LAN_IFACE}" 2>/dev/null || true
-    ifup "${GATEWAY_LAN_IFACE}"
+    # Bring up. Tolerate "already configured" — this is the idempotent path.
+    if ! ip -4 addr show dev "${GATEWAY_LAN_IFACE}" 2>/dev/null | grep -q "${LAN_IP_ONLY}/"; then
+        ifdown "${GATEWAY_LAN_IFACE}" 2>/dev/null || true
+        ifup "${GATEWAY_LAN_IFACE}"
+    fi
 fi
 
 # --- dnsmasq (DHCP + DNS for the LAN) ---

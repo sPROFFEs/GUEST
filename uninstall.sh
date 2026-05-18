@@ -17,6 +17,10 @@ echo "[*] removing config fragments"
 rm -f /etc/nftables.d/*.nft
 rm -f /etc/dnsmasq.d/gateway.conf /etc/dnsmasq.d/gateway-hosts.conf
 rm -f /etc/network/interfaces.d/gateway-lan
+if [[ -f /etc/netplan/90-gateway-lan.yaml ]]; then
+    rm -f /etc/netplan/90-gateway-lan.yaml
+    command -v netplan >/dev/null && netplan apply 2>/dev/null || true
+fi
 rm -f /etc/sysctl.d/99-gateway.conf
 rm -f /etc/systemd/resolved.conf.d/gateway.conf
 rm -f /etc/systemd/system/gateway-panel.service
