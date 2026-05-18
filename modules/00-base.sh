@@ -4,7 +4,7 @@
 set -euo pipefail
 
 # --- OS check ---
-# Debian 12 is the reference target. Ubuntu 22.04 / 24.04 work too: same apt
+# Debian 12 is the reference target. Ubuntu 22.04 / 24.04 / 26.04 work too: same apt
 # package names, same systemd, same nftables/wireguard/tor kernel bits. The
 # only meaningful difference is LAN bring-up (ifupdown vs netplan), handled
 # in 10-network.sh.
@@ -20,13 +20,13 @@ case "${ID:-}" in
         }
         ;;
     ubuntu)
-        [[ "${VERSION_ID:-}" =~ ^(22\.04|24\.04)$ ]] || {
-            echo "this installer requires Ubuntu 22.04 or 24.04 (got: ubuntu ${VERSION_ID:-?})" >&2
+        [[ "${VERSION_ID:-}" =~ ^(22\.04|24\.04|26\.04)$ ]] || {
+            echo "this installer requires Ubuntu 22.04, 24.04, or 26.04 (got: ubuntu ${VERSION_ID:-?})" >&2
             exit 1
         }
         ;;
     *)
-        echo "this installer requires Debian 12 or Ubuntu 22.04/24.04 (got: ${ID:-unknown} ${VERSION_ID:-?})" >&2
+        echo "this installer requires Debian 12 or Ubuntu 22.04/24.04/26.04 (got: ${ID:-unknown} ${VERSION_ID:-?})" >&2
         exit 1
         ;;
 esac
