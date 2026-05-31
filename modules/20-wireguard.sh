@@ -42,9 +42,14 @@ systemctl enable wg-quick@wg0 >/dev/null 2>&1 || true
 systemctl restart wg-quick@wg0
 
 # --- WGDashboard ---
-# Pinned to a stable tag. HEAD has been moving toward Python 3.12-only syntax
-# (Amnezia modules use f-strings with backslashes), which breaks Debian 12's
-# Python 3.11. Bump this when you've validated a newer release.
+# Pinned to a stable tag. Two constraints bracket the choice:
+#   - floor: HEAD moved toward f-strings with backslashes (Amnezia modules),
+#     which need Python >= 3.12 and break Debian 12's 3.11.
+#   - ceiling: v4.1.4 and its pinned deps must still import on Debian 13's
+#     Python 3.13 (the venv built below installs them fresh). The flask
+#     import check below is the smoke test; if a transitive dep lacks a 3.13
+#     wheel, it fails loudly here rather than at runtime. Bump the tag only
+#     after re-validating both ends on the distro you target.
 WGD_DIR=/opt/wgdashboard
 WGD_TAG="${WGD_TAG:-v4.1.4}"
 if [[ ! -d "$WGD_DIR/.git" ]]; then

@@ -1,6 +1,6 @@
 # Gateway
 
-A modular VPN + firewall gateway you snapshot once and clone forever. Each instance is a small Debian 12 (or Ubuntu Server 22.04/24.04) VM that:
+A modular VPN + firewall gateway you snapshot once and clone forever. Each instance is a small Debian 12/13 (or Ubuntu Server 22.04/24.04) VM that:
 
 - terminates WireGuard for a set of dev peers (managed via WGDashboard);
 - isolates an internal LAN behind it (Proxmox UI, lab VMs, anything you want sealed off);
@@ -17,7 +17,7 @@ The design and rationale are in [ARCHITECTURE.md](ARCHITECTURE.md). This documen
 ## 1. Requirements
 
 - A **VM** (not LXC). KVM/Proxmox VM, ESXi, anything with a real kernel. WireGuard, nftables fwmark routing, and `CAP_NET_ADMIN` don't work cleanly in unprivileged containers.
-- **Debian 12** (Bookworm) minimal install, or **Ubuntu Server 22.04 / 24.04 / 26.04**. The installer detects the network backend (ifupdown vs netplan) automatically.
+- **Debian 12** (Bookworm) or **Debian 13** (Trixie) minimal install, or **Ubuntu Server 22.04 / 24.04 / 26.04**. The installer detects the network backend (ifupdown vs netplan) automatically.
 - **Two NICs** attached to the VM:
   - `WAN` — the network the gateway uses to reach the rest of the world. Often a management bridge in Proxmox; can also be the real internet.
   - `LAN-internal` — a bridge with **no uplink**, where Proxmox/lab VMs live. Isolating this bridge is what makes the whole setup fail-closed: if the gateway is down, the VMs can't escape.

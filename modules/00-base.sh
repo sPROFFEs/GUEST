@@ -4,18 +4,21 @@
 set -euo pipefail
 
 # --- OS check ---
-# Debian 12 is the reference target. Ubuntu 22.04 / 24.04 / 26.04 work too: same apt
-# package names, same systemd, same nftables/wireguard/tor kernel bits. The
-# only meaningful difference is LAN bring-up (ifupdown vs netplan), handled
-# in 10-network.sh.
+# Debian 12 (Bookworm) and 13 (Trixie) are the reference targets. Ubuntu
+# 22.04 / 24.04 / 26.04 work too: same apt package names, same systemd, same
+# nftables/wireguard/tor kernel bits. The only meaningful difference is LAN
+# bring-up (ifupdown vs netplan), handled in 10-network.sh. Trixie ships
+# Python 3.13 vs Bookworm's 3.11 — the panel runs in its own venv (40-panel)
+# so its pinned deps install cleanly on both; see the WGDashboard note in
+# 20-wireguard.sh for the one place the Python version is load-bearing.
 if [[ -r /etc/os-release ]]; then
     # shellcheck disable=SC1091
     . /etc/os-release
 fi
 case "${ID:-}" in
     debian)
-        [[ "${VERSION_ID:-}" =~ ^12 ]] || {
-            echo "this installer requires Debian 12 (got: debian ${VERSION_ID:-?})" >&2
+        [[ "${VERSION_ID:-}" =~ ^(12|13)$ ]] || {
+            echo "this installer requires Debian 12 or 13 (got: debian ${VERSION_ID:-?})" >&2
             exit 1
         }
         ;;
@@ -26,7 +29,7 @@ case "${ID:-}" in
         }
         ;;
     *)
-        echo "this installer requires Debian 12 or Ubuntu 22.04/24.04/26.04 (got: ${ID:-unknown} ${VERSION_ID:-?})" >&2
+        echo "this installer requires Debian 12/13 or Ubuntu 22.04/24.04/26.04 (got: ${ID:-unknown} ${VERSION_ID:-?})" >&2
         exit 1
         ;;
 esac

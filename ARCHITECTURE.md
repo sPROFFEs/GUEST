@@ -1,6 +1,6 @@
 # Gateway VM — Arquitectura
 
-VM Debian 12 minimal que actúa como gateway VPN+firewall+DHCP para una red interna aislada, con panel web propio y opción de enrutar tráfico por Tor. Se snapshotea como template en Proxmox y se replica clonando + cambiando `gateway.toml`.
+VM Debian 12/13 minimal que actúa como gateway VPN+firewall+DHCP para una red interna aislada, con panel web propio y opción de enrutar tráfico por Tor. Se snapshotea como template en Proxmox y se replica clonando + cambiando `gateway.toml`.
 
 ---
 

@@ -54,7 +54,7 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
     exit 1
 fi
 
-# Load TOML into the env. We need python3 for this; on a fresh Debian 12 it's
+# Load TOML into the env. We need python3 for this; on a fresh Debian 12/13 it's
 # pre-installed in standard images, so this should never fail in practice.
 command -v python3 >/dev/null || { err "python3 required (apt install python3)"; exit 1; }
 
