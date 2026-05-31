@@ -10,6 +10,8 @@ A modular VPN + firewall gateway you snapshot once and clone forever. Each insta
 
 The design and rationale are in [ARCHITECTURE.md](ARCHITECTURE.md). This document is the operator guide.
 
+<img width="2506" height="1318" alt="{32D6C935-F37C-4F13-ACD8-D15325438933}" src="https://github.com/user-attachments/assets/976d6b35-d8b5-46b1-af38-81e88a99533f" />
+
 ---
 
 ## 1. Requirements
