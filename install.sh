@@ -1,107 +1,175 @@
 #!/usr/bin/env bash
-# Gateway installer — orchestrates module scripts based on gateway.toml.
-# Idempotent: safe to re-run. Each module is responsible for its own idempotency.
-set -euo pipefail
+set -Eeuo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="${SCRIPT_DIR}/gateway.toml"
+SELF_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="${SELF_DIR}/gateway.toml"
 ONLY_MODULE=""
 DRY_RUN=0
 
+blue=$'\033[1;34m'; green=$'\033[1;32m'; yellow=$'\033[1;33m'; red=$'\033[1;31m'; reset=$'\033[0m'
+log()  { printf '%s[*]%s %s\n' "$blue" "$reset" "$*"; }
+ok()   { printf '%s[+]%s %s\n' "$green" "$reset" "$*"; }
+warn() { printf '%s[!]%s %s\n' "$yellow" "$reset" "$*" >&2; }
+fail() { printf '%s[x]%s %s\n' "$red" "$reset" "$*" >&2; exit 1; }
+
 usage() {
-    cat <<EOF
-Usage: $0 [options]
-
-Options:
-  --config FILE     Path to gateway.toml (default: ./gateway.toml)
-  --module NAME     Run only this module (e.g. 00-base, 10-network)
-  --dry-run         Validate config and module syntax, change nothing
-  -h, --help        Show this help
-
-Modules run in this order (00-base and 10-network always; rest by toggle):
-  00-base          packages, sysctl, dirs, base nftables skeleton
-  10-network       LAN interface, dnsmasq, NAT (masquerade)
-  20-wireguard     wg + WGDashboard (if [modules].wireguard = true)
-  30-tor           tor TransPort + policy routing (if [modules].tor)
-  40-panel         custom FastAPI panel + scanner timer (always)
-  50-monitoring    node_exporter + vnstat (if [modules].monitoring)
-EOF
+    cat <<EOF_USAGE
+Uso: $0 [opciones]
+  --config FILE     gateway.toml a utilizar
+  --module NAME     ejecutar solo un modulo
+  --dry-run         validar sintaxis sin aplicar cambios
+  -h, --help        ayuda
+EOF_USAGE
 }
 
-while [[ $# -gt 0 ]]; do
+while (( $# )); do
     case "$1" in
-        --config)   CONFIG_FILE="$2"; shift 2 ;;
-        --module)   ONLY_MODULE="$2"; shift 2 ;;
-        --dry-run)  DRY_RUN=1; shift ;;
-        -h|--help)  usage; exit 0 ;;
-        *)          echo "unknown arg: $1" >&2; usage >&2; exit 2 ;;
+        --config) [[ $# -ge 2 ]] || fail "falta FILE tras --config"; CONFIG_FILE="$2"; shift 2 ;;
+        --module) [[ $# -ge 2 ]] || fail "falta NAME tras --module"; ONLY_MODULE="$2"; shift 2 ;;
+        --dry-run) DRY_RUN=1; shift ;;
+        -h|--help) usage; exit 0 ;;
+        *) fail "argumento desconocido: $1" ;;
     esac
 done
 
-# --- log helpers ---
-c_blue=$'\e[1;34m'; c_green=$'\e[1;32m'; c_yel=$'\e[1;33m'; c_red=$'\e[1;31m'; c_off=$'\e[0m'
-log()  { printf '%s[*]%s %s\n' "$c_blue"  "$c_off" "$*"; }
-ok()   { printf '%s[+]%s %s\n' "$c_green" "$c_off" "$*"; }
-warn() { printf '%s[!]%s %s\n' "$c_yel"   "$c_off" "$*" >&2; }
-err()  { printf '%s[x]%s %s\n' "$c_red"   "$c_off" "$*" >&2; }
+[[ ${EUID} -eq 0 ]] || fail "ejecuta el instalador como root"
+[[ -f "$CONFIG_FILE" ]] || fail "no existe la configuracion: $CONFIG_FILE"
+[[ -f "${SELF_DIR}/lib/toml-to-env.py" ]] || fail "falta ${SELF_DIR}/lib/toml-to-env.py"
 
-# --- preflight ---
-[[ $EUID -eq 0 ]] || { err "must run as root"; exit 1; }
+ensure_bootstrap_packages() {
+    local need=()
+    command -v python3  >/dev/null 2>&1 || need+=(python3)
+    command -v modprobe >/dev/null 2>&1 || need+=(kmod)
+    command -v visudo   >/dev/null 2>&1 || need+=(sudo)
+    command -v openssl  >/dev/null 2>&1 || need+=(openssl)
 
-if [[ ! -f "$CONFIG_FILE" ]]; then
-    err "config not found: $CONFIG_FILE"
-    err "copy gateway.toml.example to gateway.toml and edit it"
-    exit 1
-fi
+    if ((${#need[@]})); then
+        log "instalando prerrequisitos que faltan: ${need[*]}"
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update -qq
+        apt-get install -y --no-install-recommends "${need[@]}"
+    fi
 
-# Load TOML into the env. We need python3 for this; on a fresh Debian 12/13 it's
-# pre-installed in standard images, so this should never fail in practice.
-command -v python3 >/dev/null || { err "python3 required (apt install python3)"; exit 1; }
+    # 40-panel.sh escribe un drop-in aqui.
+    install -d -m 0750 -o root -g root /etc/sudoers.d
+}
+
+ensure_conntrack() {
+    log "comprobando nf_conntrack"
+    if ! modprobe nf_conntrack 2>/dev/null; then
+        fail "no se pudo cargar nf_conntrack; comprueba el kernel/entorno de virtualizacion"
+    fi
+
+    local key
+    for key in \
+        nf_conntrack_udp_timeout \
+        nf_conntrack_udp_timeout_stream \
+        nf_conntrack_tcp_timeout_established
+    do
+        [[ -e "/proc/sys/net/netfilter/${key}" ]] || \
+            fail "falta /proc/sys/net/netfilter/${key} incluso despues de cargar nf_conntrack"
+    done
+    ok "nf_conntrack disponible"
+}
+
+ensure_bootstrap_packages
+ensure_conntrack
 
 ENV_FILE="$(mktemp)"
 trap 'rm -f "$ENV_FILE"' EXIT
-
-if ! python3 "${SCRIPT_DIR}/lib/toml-to-env.py" "$CONFIG_FILE" > "$ENV_FILE"; then
-    err "failed to parse $CONFIG_FILE"
-    exit 1
-fi
-
+python3 "${SELF_DIR}/lib/toml-to-env.py" "$CONFIG_FILE" > "$ENV_FILE" || \
+    fail "no se pudo leer $CONFIG_FILE"
 set -a
 # shellcheck disable=SC1090
 source "$ENV_FILE"
 set +a
 
-log "config loaded from: $CONFIG_FILE"
-log "gateway name:       ${GATEWAY_NAME:-?}"
-log "wan iface:          ${GATEWAY_WAN_IFACE:-?}"
-log "lan iface:          ${GATEWAY_LAN_IFACE:-?}  (${GATEWAY_LAN_CIDR:-?})"
-log "modules: wg=${MODULES_WIREGUARD:-false} tor=${MODULES_TOR:-false} dhcp=${MODULES_DHCP:-true} mon=${MODULES_MONITORING:-false}"
+log "config: ${CONFIG_FILE}"
+log "WAN: ${GATEWAY_WAN_IFACE:-?} | LAN: ${GATEWAY_LAN_IFACE:-?}"
+log "panel: ${PANEL_BIND_ADDR:-?}:${PANEL_BIND_PORT:-?} | expose_on_wan=${PANEL_EXPOSE_ON_WAN:-false} | tls=${PANEL_TLS:-false}"
 
-# --- module selection ---
-declare -a MODULES
-MODULES+=("00-base")
-MODULES+=("10-network")
-[[ "${MODULES_WIREGUARD:-false}" == "true" ]] && MODULES+=("20-wireguard")
-[[ "${MODULES_TOR:-false}"       == "true" ]] && MODULES+=("30-tor")
-MODULES+=("40-panel")
-[[ "${MODULES_MONITORING:-false}" == "true" ]] && MODULES+=("50-monitoring")
+MODULES=(00-base 10-network)
+[[ "${MODULES_WIREGUARD:-false}" == true ]] && MODULES+=(20-wireguard)
+[[ "${MODULES_TOR:-false}" == true ]] && MODULES+=(30-tor)
+MODULES+=(40-panel)
+[[ "${MODULES_MONITORING:-false}" == true ]] && MODULES+=(50-monitoring)
 
 run_module() {
-    local mod="$1"
-    local path="${SCRIPT_DIR}/modules/${mod}.sh"
-    if [[ ! -f "$path" ]]; then
-        warn "module not implemented yet: $mod (skipping)"
+    local name="$1"
+    local file="${SELF_DIR}/modules/${name}.sh"
+    [[ -f "$file" ]] || { warn "modulo inexistente: $name; se omite"; return 0; }
+
+    log "ejecutando modulo $name"
+    if (( DRY_RUN )); then
+        bash -n "$file"
+        ok "$name: sintaxis OK"
         return 0
     fi
-    log "── running module: $mod ──"
-    if [[ $DRY_RUN -eq 1 ]]; then
-        bash -n "$path" && ok "$mod (syntax ok, dry-run)"
+
+    bash "$file" || fail "$name fallo"
+    ok "$name"
+}
+
+# Fallback de firewall. 20-wireguard deberia crear esta regla, pero esta
+# comprobacion hace que el instalador se autocorrija si el fragmento no la deja activa.
+ensure_panel_wan_firewall() {
+    [[ "${PANEL_EXPOSE_ON_WAN:-false}" == true ]] || {
+        rm -f /etc/nftables.d/25-panel-wan-fallback.nft
         return 0
+    }
+
+    [[ -n "${GATEWAY_WAN_IFACE:-}" ]] || fail "GATEWAY_WAN_IFACE vacio"
+    [[ -n "${PANEL_BIND_PORT:-}" ]] || fail "PANEL_BIND_PORT vacio"
+
+    local ports="${PANEL_BIND_PORT}"
+    if [[ "${MODULES_WIREGUARD:-false}" == true && -n "${PANEL_WGD_BIND_PORT:-}" ]]; then
+        ports="${PANEL_BIND_PORT}, ${PANEL_WGD_BIND_PORT}"
     fi
-    if bash "$path"; then
-        ok "$mod"
+
+    # Si el fragmento oficial ya contiene la apertura WAN, no duplicamos reglas.
+    if [[ -f /etc/nftables.d/20-wireguard.nft ]] && \
+       grep -Fq "iifname \"${GATEWAY_WAN_IFACE}\" tcp dport" /etc/nftables.d/20-wireguard.nft; then
+        rm -f /etc/nftables.d/25-panel-wan-fallback.nft
     else
-        err "$mod failed"
+        warn "20-wireguard.nft no contiene la apertura WAN; creando fallback persistente"
+        cat > /etc/nftables.d/25-panel-wan-fallback.nft <<EOF_NFT
+# Autogenerado por install-fixed.sh
+# Fallback para [panel].expose_on_wan = true
+table inet gateway {
+    chain input {
+        iifname "${GATEWAY_WAN_IFACE}" tcp dport { ${ports} } accept
+    }
+}
+EOF_NFT
+    fi
+
+    nft -c -f /etc/nftables.conf || fail "la configuracion nftables resultante no es valida"
+    nft -f /etc/nftables.conf
+
+    if nft list chain inet gateway input 2>/dev/null | \
+       grep -Fq "iifname \"${GATEWAY_WAN_IFACE}\" tcp dport"; then
+        ok "firewall WAN del panel activo"
+    else
+        fail "el ruleset sigue sin permitir el panel por ${GATEWAY_WAN_IFACE}"
+    fi
+}
+
+verify_panel() {
+    (( DRY_RUN )) && return 0
+    [[ -n "${PANEL_BIND_PORT:-}" ]] || return 0
+
+    if systemctl is-active --quiet gateway-panel; then
+        ok "gateway-panel esta activo"
+    else
+        warn "gateway-panel no esta activo"
+        systemctl status gateway-panel --no-pager -l || true
+        return 1
+    fi
+
+    if ss -lntH | awk '{print $4}' | grep -Eq "(^|:)${PANEL_BIND_PORT}$"; then
+        ok "panel escuchando en TCP/${PANEL_BIND_PORT}"
+    else
+        warn "no se detecta ningun listener en TCP/${PANEL_BIND_PORT}"
         return 1
     fi
 }
@@ -114,4 +182,15 @@ else
     done
 fi
 
-ok "install complete"
+if (( ! DRY_RUN )); then
+    ensure_panel_wan_firewall
+    verify_panel || true
+fi
+
+ok "instalacion completada"
+
+if [[ "${PANEL_TLS:-false}" == true ]]; then
+    printf 'Panel: https://<IP-de-%s>:%s\n' "${GATEWAY_WAN_IFACE:-WAN}" "${PANEL_BIND_PORT:-8443}"
+else
+    printf 'Panel: http://<IP-de-%s>:%s\n' "${GATEWAY_WAN_IFACE:-WAN}" "${PANEL_BIND_PORT:-8443}"
+fi
